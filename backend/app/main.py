@@ -41,6 +41,18 @@ def run_startup_migrations() -> None:
             statements.append("ALTER TABLE customers ADD COLUMN employer VARCHAR(200)")
         if "place_of_work" not in existing_customer_columns:
             statements.append("ALTER TABLE customers ADD COLUMN place_of_work VARCHAR(200)")
+        if "date_of_birth" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN date_of_birth DATE")
+        if "nationality" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN nationality VARCHAR(80)")
+        if "transaction_frequency" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN transaction_frequency VARCHAR(50)")
+        if "known_sanctions" not in existing_customer_columns:
+            statements.append(
+                "ALTER TABLE customers ADD COLUMN known_sanctions BOOLEAN DEFAULT 0"
+            )
+        if "sanctions_details" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN sanctions_details TEXT")
 
     if "gold_transactions" in tables:
         existing_txn_columns = {

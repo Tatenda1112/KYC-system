@@ -22,7 +22,7 @@ interface FormErrors {
   [key: string]: string;
 }
 
-const CddToggle = ({
+const YesNoToggle = ({
   value,
   onChange,
 }: {
@@ -55,6 +55,14 @@ const CddToggle = ({
   </div>
 );
 
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3 pt-1">
+      {children}
+    </div>
+  );
+}
+
 export default function AddCustomerPage() {
   const router = useRouter();
 
@@ -68,23 +76,42 @@ export default function AddCustomerPage() {
   const [checkDone, setCheckDone] = useState(false);
   const [existingCustomer, setExistingCustomer] = useState<ExistingCustomer | null>(null);
 
-  // Form state
+  // ── Identity
   const [fullName, setFullName] = useState('');
   const [nationalId, setNationalId] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [nationality, setNationality] = useState('');
+
+  // ── Contact
   const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
+  const [email, setEmail] = useState('');
+
+  // ── Financial
   const [occupation, setOccupation] = useState('');
   const [employer, setEmployer] = useState('');
-  const [placeOfWork, setPlaceOfWork] = useState('');
   const [sourceOfFunds, setSourceOfFunds] = useState('');
   const [purposeOfPurchase, setPurposeOfPurchase] = useState('');
+  const [transactionFrequency, setTransactionFrequency] = useState('');
+
+  // ── Risk
   const [politicallyExposed, setPoliticallyExposed] = useState(false);
   const [pepDetails, setPepDetails] = useState('');
+  const [knownSanctions, setKnownSanctions] = useState(false);
+  const [sanctionsDetails, setSanctionsDetails] = useState('');
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+
+  // CDD ref for display (form instance identifier)
+  const [cddRef] = useState(() => {
+    const ts = Date.now();
+    return `CDD-${ts.toString().slice(-8)}`;
+  });
+  const today = new Date().toLocaleDateString('en-GB', {
+    day: '2-digit', month: 'short', year: 'numeric',
+  });
 
   useEffect(() => {
     const reg = localStorage.getItem('minerRegNumber');
@@ -126,14 +153,14 @@ export default function AddCustomerPage() {
     setExistingCustomer(null);
     try {
       const params = new URLSearchParams({ national_id: checkInput.trim() });
-      if (minerRegNumber) params.set('miner_reg_number', minerRegNumber);
+      const reg = localStorage.getItem('minerRegNumber');
+      if (reg) params.set('miner_reg_number', reg);
       const res = await fetch(`/api/customers/check?${params}`, { cache: 'no-store' });
       const data = await res.json();
       setExistingCustomer(data ?? null);
       setCheckDone(true);
     } catch {
       setCheckDone(true);
-      setExistingCustomer(null);
     } finally {
       setCheckLoading(false);
     }
@@ -147,9 +174,10 @@ export default function AddCustomerPage() {
 
   const validate = (): boolean => {
     const e: FormErrors = {};
-    if (!fullName.trim()) e.fullName = 'This field is required';
-    if (!nationalId.trim()) e.nationalId = 'This field is required';
-    if (politicallyExposed && !pepDetails.trim()) e.pepDetails = 'Please describe the PEP connection';
+    if (!fullName.trim()) e.fullName = 'Required';
+    if (!nationalId.trim()) e.nationalId = 'Required';
+    if (politicallyExposed && !pepDetails.trim()) e.pepDetails = 'Describe the PEP connection';
+    if (knownSanctions && !sanctionsDetails.trim()) e.sanctionsDetails = 'Describe the sanctions';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -163,16 +191,20 @@ export default function AddCustomerPage() {
       miner_reg_number: minerRegNumber ?? null,
       full_name: fullName.trim(),
       national_id: nationalId.trim(),
+      date_of_birth: dateOfBirth || null,
+      nationality: nationality.trim() || null,
       phone_number: phone.trim() || null,
       email: email.trim() || null,
       physical_address: address.trim() || null,
       occupation: occupation.trim() || null,
       employer: employer.trim() || null,
-      place_of_work: placeOfWork.trim() || null,
-      source_of_funds: sourceOfFunds.trim() || null,
+      source_of_funds: sourceOfFunds || null,
       purpose_of_purchase: purposeOfPurchase || null,
+      transaction_frequency: transactionFrequency || null,
       politically_exposed: politicallyExposed,
       pep_details: pepDetails.trim() || null,
+      known_sanctions: knownSanctions,
+      sanctions_details: sanctionsDetails.trim() || null,
     };
 
     try {
@@ -198,7 +230,7 @@ export default function AddCustomerPage() {
     }
   };
 
-  const fieldClass = (field: string) =>
+  const fc = (field: string) =>
     `${inputBase} ${errors[field] ? 'border-gray-800' : 'border-gray-200'}`;
 
   if (minerKycStatus && minerKycStatus !== 'Verified') {
@@ -235,272 +267,332 @@ export default function AddCustomerPage() {
 
         {/* CONTENT */}
         <div className="flex-1 overflow-auto bg-gray-50 p-5">
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <div className="max-w-2xl mx-auto space-y-4">
 
-              {/* CDD requirement info box */}
-              <div className="border-l-2 border-gray-300 pl-3 mb-5">
-                <div className="text-xs font-medium text-gray-600 mb-1">CDD requirement</div>
-                <div className="text-xs text-gray-500 leading-relaxed">
-                  You must record details of every person who purchases gold from you before
-                  completing the transaction. This is your Customer Due Diligence (CDD) obligation
-                  under the Money Laundering and Proceeds of Crime Act (Zimbabwe) and FATF
-                  Recommendations (2024).
-                </div>
+            {/* CDD requirement banner */}
+            <div className="border-l-2 border-gray-300 bg-white pl-3 py-2.5 rounded-r">
+              <div className="text-xs font-medium text-gray-600 mb-0.5">CDD requirement</div>
+              <div className="text-xs text-gray-400 leading-relaxed">
+                Record details of every gold buyer before completing the transaction — Money
+                Laundering and Proceeds of Crime Act (Zimbabwe) · FATF Recommendations 2024.
               </div>
+            </div>
 
-              {/* CHECK EXISTING CUSTOMER */}
-              <div className="mb-2">
-                <label className="text-xs text-gray-500 mb-1.5 block">
-                  Check if customer is already registered
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={checkInput}
-                    onChange={e => { setCheckInput(e.target.value); setCheckDone(false); }}
-                    onKeyDown={e => e.key === 'Enter' && handleCheck()}
-                    placeholder="Enter national ID number to check..."
-                    className={`${inputBase} border-gray-200 flex-1`}
-                  />
+            {/* CHECK EXISTING */}
+            <div className="bg-white border border-gray-200 rounded-lg p-5">
+              <div className="text-xs text-gray-500 mb-1.5">
+                Check if this customer is already registered
+              </div>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={checkInput}
+                  onChange={e => { setCheckInput(e.target.value); setCheckDone(false); }}
+                  onKeyDown={e => e.key === 'Enter' && handleCheck()}
+                  placeholder="Enter national ID number to check..."
+                  className={`${inputBase} border-gray-200 flex-1`}
+                />
+                <button
+                  type="button"
+                  onClick={handleCheck}
+                  disabled={checkLoading || !checkInput.trim()}
+                  className="h-9 px-4 text-sm border border-gray-200 rounded-md text-gray-600 hover:bg-gray-50 transition disabled:opacity-40"
+                >
+                  {checkLoading ? '…' : 'Check'}
+                </button>
+              </div>
+              {checkDone && existingCustomer && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mt-2 flex justify-between items-center">
+                  <div>
+                    <div className="text-xs text-gray-700 font-medium">{existingCustomer.full_name}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">
+                      Already registered · {existingCustomer.total_transactions} previous transaction
+                      {existingCustomer.total_transactions !== 1 ? 's' : ''}
+                    </div>
+                  </div>
                   <button
                     type="button"
-                    onClick={handleCheck}
-                    disabled={checkLoading || !checkInput.trim()}
-                    className="h-9 px-4 text-sm border border-gray-200 rounded-md text-gray-600 hover:bg-gray-50 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                    onClick={() => useExistingCustomer(existingCustomer)}
+                    className="bg-gray-900 text-white text-xs px-3 py-1.5 rounded hover:bg-gray-800 transition"
                   >
-                    {checkLoading ? '…' : 'Check'}
+                    Use this customer
                   </button>
                 </div>
+              )}
+              {checkDone && !existingCustomer && (
+                <div className="text-xs text-gray-400 mt-2">
+                  No existing customer found. Please complete the form below.
+                </div>
+              )}
+            </div>
 
-                {checkDone && existingCustomer && (
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 mt-2 flex justify-between items-center">
+            {/* ── MAIN FORM ───────────────────────────────────────────────── */}
+            <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-5">
+
+              {/* ── IDENTITY VERIFICATION ─────────────────────────────────── */}
+              <div>
+                <SectionLabel>Identity verification</SectionLabel>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <div className="text-xs text-gray-700 font-medium">{existingCustomer.full_name}</div>
-                      <div className="text-xs text-gray-400 mt-0.5">
-                        Already registered · {existingCustomer.total_transactions} previous transaction
-                        {existingCustomer.total_transactions !== 1 ? 's' : ''}
-                      </div>
+                      <label className="text-xs text-gray-500 mb-1 block">
+                        Full name <span className="text-gray-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={fullName}
+                        onChange={e => { setFullName(e.target.value); if (errors.fullName) setErrors(p => ({ ...p, fullName: '' })); }}
+                        className={fc('fullName')}
+                        placeholder="e.g. Tatenda Moyo"
+                      />
+                      {errors.fullName && <div className="text-xs text-gray-500 mt-1">{errors.fullName}</div>}
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => useExistingCustomer(existingCustomer)}
-                      className="bg-gray-900 text-white text-xs px-3 py-1.5 rounded hover:bg-gray-800 transition"
-                    >
-                      Use this customer
-                    </button>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">
+                        National ID <span className="text-gray-400">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={nationalId}
+                        onChange={e => { setNationalId(e.target.value); if (errors.nationalId) setErrors(p => ({ ...p, nationalId: '' })); }}
+                        className={fc('nationalId')}
+                        placeholder="e.g. 63-123456A78"
+                      />
+                      {errors.nationalId && <div className="text-xs text-gray-500 mt-1">{errors.nationalId}</div>}
+                    </div>
                   </div>
-                )}
-
-                {checkDone && !existingCustomer && (
-                  <div className="text-xs text-gray-400 mt-2">
-                    No existing customer found. Please complete the form below.
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Date of birth</label>
+                      <input
+                        type="date"
+                        value={dateOfBirth}
+                        onChange={e => setDateOfBirth(e.target.value)}
+                        className={`${inputBase} border-gray-200`}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Nationality</label>
+                      <input
+                        type="text"
+                        value={nationality}
+                        onChange={e => setNationality(e.target.value)}
+                        className={`${inputBase} border-gray-200`}
+                        placeholder="e.g. Zimbabwean"
+                      />
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
 
-              <div className="border-t border-gray-100 my-5" />
+              <div className="border-t border-gray-100" />
 
-              {/* CUSTOMER DETAILS FORM */}
-              <div className="space-y-4">
-                <div className="text-xs text-gray-400 uppercase tracking-wider mb-3">
-                  Customer details
-                </div>
-
-                {/* Row 1 */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">
-                      Full name <span className="text-gray-400">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={fullName}
-                      onChange={e => { setFullName(e.target.value); if (errors.fullName) setErrors(p => ({ ...p, fullName: '' })); }}
-                      className={fieldClass('fullName')}
-                      placeholder="e.g. Tatenda Moyo"
-                    />
-                    {errors.fullName && (
-                      <div className="text-xs text-gray-500 mt-1">{errors.fullName}</div>
-                    )}
+              {/* ── CONTACT DETAILS ───────────────────────────────────────── */}
+              <div>
+                <SectionLabel>Contact details</SectionLabel>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Phone number</label>
+                      <input
+                        type="text"
+                        value={phone}
+                        onChange={e => setPhone(e.target.value)}
+                        className={`${inputBase} border-gray-200`}
+                        placeholder="e.g. +263 77 123 4567"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">
+                        Email <span className="text-gray-300">(optional)</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={e => setEmail(e.target.value)}
+                        className={`${inputBase} border-gray-200`}
+                        placeholder="e.g. tatenda@email.com"
+                      />
+                    </div>
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 mb-1 block">
-                      National ID number <span className="text-gray-400">*</span>
-                    </label>
+                    <label className="text-xs text-gray-500 mb-1 block">Physical address</label>
                     <input
                       type="text"
-                      value={nationalId}
-                      onChange={e => { setNationalId(e.target.value); if (errors.nationalId) setErrors(p => ({ ...p, nationalId: '' })); }}
-                      className={fieldClass('nationalId')}
-                      placeholder="e.g. 63-123456A78"
-                    />
-                    {errors.nationalId && (
-                      <div className="text-xs text-gray-500 mt-1">{errors.nationalId}</div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Row 2 */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Phone number</label>
-                    <input
-                      type="text"
-                      value={phone}
-                      onChange={e => setPhone(e.target.value)}
+                      value={address}
+                      onChange={e => setAddress(e.target.value)}
                       className={`${inputBase} border-gray-200`}
-                      placeholder="e.g. +263 77 123 4567"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">
-                      Email address <span className="text-gray-300">(optional)</span>
-                    </label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      className={`${inputBase} border-gray-200`}
-                      placeholder="e.g. tatenda@email.com"
+                      placeholder="e.g. 14 Baines Ave, Harare"
                     />
                   </div>
                 </div>
+              </div>
 
-                {/* Full width */}
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Physical address</label>
-                  <input
-                    type="text"
-                    value={address}
-                    onChange={e => setAddress(e.target.value)}
-                    className={`${inputBase} border-gray-200`}
-                    placeholder="e.g. 14 Baines Ave, Harare"
-                  />
-                </div>
+              <div className="border-t border-gray-100" />
 
-                {/* Row 3 — Occupation & Source of funds */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Occupation</label>
-                    <input
-                      type="text"
-                      value={occupation}
-                      onChange={e => setOccupation(e.target.value)}
-                      className={`${inputBase} border-gray-200`}
-                      placeholder="e.g. Gold dealer, Businessman"
-                    />
+              {/* ── FINANCIAL INFORMATION ─────────────────────────────────── */}
+              <div>
+                <SectionLabel>Financial information</SectionLabel>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Occupation</label>
+                      <input
+                        type="text"
+                        value={occupation}
+                        onChange={e => setOccupation(e.target.value)}
+                        className={`${inputBase} border-gray-200`}
+                        placeholder="e.g. Gold dealer, Farmer"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Employer / Business</label>
+                      <input
+                        type="text"
+                        value={employer}
+                        onChange={e => setEmployer(e.target.value)}
+                        className={`${inputBase} border-gray-200`}
+                        placeholder="e.g. Self-employed, Fidelity Gold"
+                      />
+                    </div>
                   </div>
+
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block">Source of funds</label>
-                    <input
-                      type="text"
+                    <select
                       value={sourceOfFunds}
                       onChange={e => setSourceOfFunds(e.target.value)}
                       className={`${inputBase} border-gray-200`}
-                      placeholder="e.g. Business income, Salary"
-                    />
+                    >
+                      <option value="">Select source of funds...</option>
+                      <option value="Salary">Salary</option>
+                      <option value="Business income">Business income</option>
+                      <option value="Inheritance">Inheritance</option>
+                      <option value="Investment returns">Investment returns</option>
+                      <option value="Gold mining proceeds">Gold mining proceeds</option>
+                      <option value="Other">Other</option>
+                    </select>
+                    <div className="text-xs text-gray-400 mt-1">
+                      Most important field — explains where the money came from
+                    </div>
                   </div>
-                </div>
 
-                {/* Row 4 — Employer & Place of work */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Employer</label>
-                    <input
-                      type="text"
-                      value={employer}
-                      onChange={e => setEmployer(e.target.value)}
-                      className={`${inputBase} border-gray-200`}
-                      placeholder="e.g. Fidelity Gold Refinery"
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Purpose of purchase</label>
+                      <select
+                        value={purposeOfPurchase}
+                        onChange={e => setPurposeOfPurchase(e.target.value)}
+                        className={`${inputBase} border-gray-200`}
+                      >
+                        <option value="">Select purpose...</option>
+                        <option value="Personal investment">Personal investment</option>
+                        <option value="Business / resale">Business / resale</option>
+                        <option value="Export">Export</option>
+                        <option value="Jewellery manufacturing">Jewellery manufacturing</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">
+                        Expected transaction frequency
+                      </label>
+                      <select
+                        value={transactionFrequency}
+                        onChange={e => setTransactionFrequency(e.target.value)}
+                        className={`${inputBase} border-gray-200`}
+                      >
+                        <option value="">Select frequency...</option>
+                        <option value="Once off">Once off</option>
+                        <option value="Monthly">Monthly</option>
+                        <option value="Regular / ongoing">Regular / ongoing</option>
+                      </select>
+                      <div className="text-xs text-gray-400 mt-1">
+                        Weekly buyers require enhanced monitoring
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Place of work</label>
-                    <input
-                      type="text"
-                      value={placeOfWork}
-                      onChange={e => setPlaceOfWork(e.target.value)}
-                      className={`${inputBase} border-gray-200`}
-                      placeholder="e.g. Kwekwe Industrial Area"
-                    />
-                  </div>
-                </div>
-
-                {/* Purpose of purchase */}
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Purpose of purchase</label>
-                  <select
-                    value={purposeOfPurchase}
-                    onChange={e => setPurposeOfPurchase(e.target.value)}
-                    className={`${inputBase} border-gray-200`}
-                  >
-                    <option value="">Select purpose...</option>
-                    <option value="Personal investment">Personal investment</option>
-                    <option value="Business / resale">Business / resale</option>
-                    <option value="Export">Export</option>
-                    <option value="Jewellery manufacturing">Jewellery manufacturing</option>
-                    <option value="Other">Other</option>
-                  </select>
                 </div>
               </div>
 
-              <div className="border-t border-gray-100 my-5" />
+              <div className="border-t border-gray-100" />
 
-              {/* RISK ASSESSMENT */}
-              <div className="space-y-3">
-                <div className="text-xs text-gray-400 uppercase tracking-wider mb-3">
-                  Risk assessment
-                </div>
+              {/* ── RISK ASSESSMENT ───────────────────────────────────────── */}
+              <div>
+                <SectionLabel>Risk assessment</SectionLabel>
+                <div className="space-y-3">
 
-                {/* PEP toggle row */}
-                <div className="flex items-center justify-between py-3 border border-gray-100 rounded-lg px-4">
-                  <div>
-                    <div className="text-sm text-gray-800 font-medium">
-                      Is this customer a politically exposed person (PEP)?
-                    </div>
-                    <div className="text-xs text-gray-400 mt-0.5">
-                      Government officials, politicians, senior public figures or their associates
-                    </div>
-                  </div>
-                  <CddToggle value={politicallyExposed} onChange={setPoliticallyExposed} />
-                </div>
-
-                {/* PEP details */}
-                {politicallyExposed && (
-                  <>
+                  {/* PEP */}
+                  <div className="flex items-center justify-between py-3 border border-gray-100 rounded-lg px-4">
                     <div>
-                      <label className="text-xs text-gray-500 mb-1 block">PEP details</label>
+                      <div className="text-sm text-gray-800 font-medium">
+                        Politically exposed person (PEP)?
+                      </div>
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        Government officials, politicians, senior public figures or their associates
+                      </div>
+                    </div>
+                    <YesNoToggle value={politicallyExposed} onChange={setPoliticallyExposed} />
+                  </div>
+                  {politicallyExposed && (
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Describe their position</label>
                       <textarea
                         value={pepDetails}
                         onChange={e => { setPepDetails(e.target.value); if (errors.pepDetails) setErrors(p => ({ ...p, pepDetails: '' })); }}
-                        className={`w-full border rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gray-800 min-h-20 ${errors.pepDetails ? 'border-gray-800' : 'border-gray-200'}`}
-                        placeholder="Describe their political position or connection..."
+                        className={`w-full border rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gray-800 min-h-16 ${errors.pepDetails ? 'border-gray-800' : 'border-gray-200'}`}
+                        placeholder="e.g. Member of Parliament for Harare West since 2018..."
                       />
-                      {errors.pepDetails && (
-                        <div className="text-xs text-gray-500 mt-1">{errors.pepDetails}</div>
-                      )}
+                      {errors.pepDetails && <div className="text-xs text-gray-500 mt-1">{errors.pepDetails}</div>}
                     </div>
+                  )}
 
-                    <div className="bg-gray-900 text-white rounded-lg p-3">
-                      <div className="text-xs leading-relaxed">
-                        Politically exposed persons require enhanced due diligence. This customer
-                        will be automatically flagged for compliance review. You must obtain
-                        additional documentation and approval before proceeding.
+                  {/* Sanctions */}
+                  <div className="flex items-center justify-between py-3 border border-gray-100 rounded-lg px-4">
+                    <div>
+                      <div className="text-sm text-gray-800 font-medium">
+                        Any known sanctions?
+                      </div>
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        OFAC, UN, EU, or Zimbabwe sanctions list
                       </div>
                     </div>
-                  </>
-                )}
+                    <YesNoToggle value={knownSanctions} onChange={setKnownSanctions} />
+                  </div>
+                  {knownSanctions && (
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Describe the sanctions</label>
+                      <textarea
+                        value={sanctionsDetails}
+                        onChange={e => { setSanctionsDetails(e.target.value); if (errors.sanctionsDetails) setErrors(p => ({ ...p, sanctionsDetails: '' })); }}
+                        className={`w-full border rounded-md bg-gray-50 px-3 py-2 text-sm text-gray-800 focus:outline-none focus:border-gray-800 min-h-16 ${errors.sanctionsDetails ? 'border-gray-800' : 'border-gray-200'}`}
+                        placeholder="e.g. Listed on OFAC SDN list as of Jan 2024..."
+                      />
+                      {errors.sanctionsDetails && <div className="text-xs text-gray-500 mt-1">{errors.sanctionsDetails}</div>}
+                    </div>
+                  )}
+
+                  {/* High-risk warning */}
+                  {(politicallyExposed || knownSanctions) && (
+                    <div className="bg-gray-900 text-white rounded-lg p-3">
+                      <div className="text-xs leading-relaxed">
+                        {knownSanctions
+                          ? 'This customer has known sanctions. This transaction may be prohibited. Stop and report to your compliance officer immediately before proceeding.'
+                          : 'Politically exposed persons require enhanced due diligence. This customer will be automatically flagged for compliance review. Obtain additional documentation and approval before proceeding.'}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {submitError && (
-                <div className="mt-4 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded p-3">
+                <div className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded p-3">
                   {submitError}
                 </div>
               )}
 
-              {/* ACTION BUTTONS */}
-              <div className="flex gap-3 mt-6">
+              {/* ACTIONS */}
+              <div className="flex gap-3 pt-1">
                 <button
                   type="button"
                   onClick={() => router.push('/miner/customers')}
@@ -514,11 +606,31 @@ export default function AddCustomerPage() {
                   disabled={isSubmitting}
                   className="flex-1 bg-gray-900 text-white text-sm py-2.5 rounded-md hover:bg-gray-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {isSubmitting ? 'Saving…' : 'Save customer'}
+                  {isSubmitting ? 'Saving…' : 'Save customer record'}
                 </button>
               </div>
-
             </div>
+
+            {/* ── CDD FORM FOOTER ─────────────────────────────────────────── */}
+            <div className="bg-white border border-gray-200 rounded-lg px-5 py-3 flex items-center justify-between">
+              <div className="flex gap-6">
+                <div>
+                  <div className="text-xs text-gray-400">Recorded by</div>
+                  <div className="text-xs text-gray-700 font-medium mt-0.5">
+                    {minerName || '—'}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-400">Date</div>
+                  <div className="text-xs text-gray-700 font-medium mt-0.5">{today}</div>
+                </div>
+              </div>
+              <div className="text-right">
+                <div className="text-xs text-gray-400">CDD reference</div>
+                <div className="text-xs text-gray-500 font-mono mt-0.5">{cddRef}</div>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>

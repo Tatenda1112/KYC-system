@@ -258,22 +258,32 @@ class KycStatusUpdate(BaseModel):
 
 class CustomerCreate(BaseModel):
     miner_reg_number: str | None = Field(None, max_length=60)
+    # Identity
     full_name: str = Field(..., min_length=2, max_length=200)
     national_id: str = Field(..., min_length=3, max_length=80)
+    date_of_birth: date | None = None
+    nationality: str | None = Field(None, max_length=80)
+    # Contact
     phone_number: str | None = Field(None, max_length=40)
     email: str | None = Field(None, max_length=255)
     physical_address: str | None = None
+    # Financial
     occupation: str | None = Field(None, max_length=120)
     employer: str | None = Field(None, max_length=200)
     place_of_work: str | None = Field(None, max_length=200)
     source_of_funds: str | None = Field(None, max_length=200)
     purpose_of_purchase: str | None = Field(None, max_length=200)
+    transaction_frequency: str | None = Field(None, max_length=50)
+    # Risk
     politically_exposed: bool = False
     pep_details: str | None = None
+    known_sanctions: bool = False
+    sanctions_details: str | None = None
 
     @field_validator(
-        "phone_number", "email", "physical_address", "occupation",
-        "employer", "place_of_work", "source_of_funds", "purpose_of_purchase", "pep_details",
+        "nationality", "phone_number", "email", "physical_address", "occupation",
+        "employer", "place_of_work", "source_of_funds", "purpose_of_purchase",
+        "transaction_frequency", "pep_details", "sanctions_details",
         mode="before",
     )
     @classmethod
@@ -290,18 +300,27 @@ class CustomerOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     miner_reg_number: str | None
+    # Identity
     full_name: str
     national_id: str
+    date_of_birth: date | None
+    nationality: str | None
+    # Contact
     phone_number: str | None
     email: str | None
     physical_address: str | None
+    # Financial
     occupation: str | None
     employer: str | None
     place_of_work: str | None
     source_of_funds: str | None
     purpose_of_purchase: str | None
+    transaction_frequency: str | None
+    # Risk
     politically_exposed: bool
     pep_details: str | None
+    known_sanctions: bool
+    sanctions_details: str | None
     risk_level: str
     is_flagged: bool
     flag_reason: str | None
@@ -313,6 +332,8 @@ class CustomerOut(BaseModel):
 
 class CustomerUpdate(BaseModel):
     full_name: str | None = Field(None, min_length=2, max_length=200)
+    date_of_birth: date | None = None
+    nationality: str | None = Field(None, max_length=80)
     phone_number: str | None = Field(None, max_length=40)
     email: str | None = Field(None, max_length=255)
     physical_address: str | None = None
@@ -321,12 +342,16 @@ class CustomerUpdate(BaseModel):
     place_of_work: str | None = Field(None, max_length=200)
     source_of_funds: str | None = Field(None, max_length=200)
     purpose_of_purchase: str | None = Field(None, max_length=200)
+    transaction_frequency: str | None = Field(None, max_length=50)
     politically_exposed: bool | None = None
     pep_details: str | None = None
+    known_sanctions: bool | None = None
+    sanctions_details: str | None = None
 
     @field_validator(
-        "phone_number", "email", "physical_address", "occupation",
-        "employer", "place_of_work", "source_of_funds", "purpose_of_purchase", "pep_details",
+        "nationality", "phone_number", "email", "physical_address", "occupation",
+        "employer", "place_of_work", "source_of_funds", "purpose_of_purchase",
+        "transaction_frequency", "pep_details", "sanctions_details",
         mode="before",
     )
     @classmethod
@@ -343,18 +368,27 @@ class CustomerAdminRow(BaseModel):
     created_at: datetime
     updated_at: datetime
     miner_reg_number: str | None
+    # Identity
     full_name: str
     national_id: str
+    date_of_birth: date | None
+    nationality: str | None
+    # Contact
     phone_number: str | None
     email: str | None
     physical_address: str | None
+    # Financial
     occupation: str | None
     employer: str | None
     place_of_work: str | None
     source_of_funds: str | None
     purpose_of_purchase: str | None
+    transaction_frequency: str | None
+    # Risk
     politically_exposed: bool
     pep_details: str | None
+    known_sanctions: bool
+    sanctions_details: str | None
     risk_level: str
     is_flagged: bool
     flag_reason: str | None

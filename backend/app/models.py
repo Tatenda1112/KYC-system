@@ -209,15 +209,24 @@ class Customer(Base):
     phone_number: Mapped[str | None] = mapped_column(String(40), nullable=True)
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     physical_address: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Identity
+    date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
+    nationality: Mapped[str | None] = mapped_column(String(80), nullable=True)
+
     occupation: Mapped[str | None] = mapped_column(String(120), nullable=True)
     employer: Mapped[str | None] = mapped_column(String(200), nullable=True)
     place_of_work: Mapped[str | None] = mapped_column(String(200), nullable=True)
     source_of_funds: Mapped[str | None] = mapped_column(String(200), nullable=True)
     purpose_of_purchase: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    transaction_frequency: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     # PEP
     politically_exposed: Mapped[bool] = mapped_column(Boolean, default=False)
     pep_details: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    # Sanctions
+    known_sanctions: Mapped[bool] = mapped_column(Boolean, default=False)
+    sanctions_details: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Risk assessment
     risk_level: Mapped[str] = mapped_column(String(20), default="medium")  # high / medium / low

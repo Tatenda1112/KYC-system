@@ -10,14 +10,15 @@ from app.schemas import CustomerAdminRow, CustomerCreate, CustomerOut, CustomerU
 router = APIRouter(prefix="/customers", tags=["customers"])
 
 
-def _assess_risk(politically_exposed: bool) -> tuple[str, bool, str | None]:
+def _assess_risk(politically_exposed: bool, known_sanctions: bool) -> tuple[str, bool, str | None]:
     """Return (risk_level, is_flagged, flag_reason) based on customer profile."""
+    reasons: list[str] = []
     if politically_exposed:
-        return (
-            "high",
-            True,
-            "Politically exposed person (PEP) — requires enhanced due diligence",
-        )
+        reasons.append("Politically exposed person (PEP) — requires enhanced due diligence")
+    if known_sanctions:
+        reasons.append("Known sanctions — transaction prohibited until cleared")
+    if reasons:
+        return "high", True, "; ".join(reasons)
     return "medium", False, None
 
 
@@ -81,14 +82,21 @@ def list_customers_admin(
                 miner_reg_number=c.miner_reg_number,
                 full_name=c.full_name,
                 national_id=c.national_id,
+                date_of_birth=c.date_of_birth,
+                nationality=c.nationality,
                 phone_number=c.phone_number,
                 email=c.email,
                 physical_address=c.physical_address,
                 occupation=c.occupation,
+                employer=c.employer,
+                place_of_work=c.place_of_work,
                 source_of_funds=c.source_of_funds,
                 purpose_of_purchase=c.purpose_of_purchase,
+                transaction_frequency=c.transaction_frequency,
                 politically_exposed=c.politically_exposed,
                 pep_details=c.pep_details,
+                known_sanctions=c.known_sanctions,
+                sanctions_details=c.sanctions_details,
                 risk_level=c.risk_level,
                 is_flagged=c.is_flagged,
                 flag_reason=c.flag_reason,
@@ -109,7 +117,9 @@ def create_customer(
     db: Session = Depends(get_db),
 ) -> Customer:
     """Create a new customer for a miner. Auto-flags PEP customers."""
-    risk_level, is_flagged, flag_reason = _assess_risk(payload.politically_exposed)
+    risk_level, is_flagged, flag_reason = _assess_risk(
+        payload.politically_exposed, payload.known_sanctions
+    )
     customer = Customer(
         **payload.model_dump(),
         risk_level=risk_level,
@@ -171,8 +181,10 @@ def update_customer(
         setattr(customer, field, value)
 
     # Re-run risk assessment when PEP status was updated
-    if "politically_exposed" in data:
-        risk_level, is_flagged, flag_reason = _assess_risk(customer.politically_exposed)
+    if "politically_exposed" in data or "known_sanctions" in data:
+        risk_level, is_flagged, flag_reason = _assess_risk(
+            customer.politically_exposed, customer.known_sanctions
+        )
         customer.risk_level = risk_level
         if is_flagged and not customer.is_flagged:
             customer.is_flagged = True
