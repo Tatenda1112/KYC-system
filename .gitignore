@@ -1,0 +1,42 @@
+# Environment variables — never commit real secrets
+.env
+.env.local
+.env.production
+
+# SQLite database — contains personal data
+*.db
+*.sqlite
+*.sqlite3
+
+# Next.js build output
+.next/
+out/
+
+# Node modules
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+backend/.venv/
+backend/venv/
+*.egg-info/
+dist/
+build/
+
+# Claude Code session data
+.claude/
+
+# TypeScript build info
+tsconfig.tsbuildinfo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

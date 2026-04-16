@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SSM CDD/KYC Research - Data Collection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .brand {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .muted {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 20px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .nav-link {
+            padding: 8px 16px;
+            background: #f8f9fa;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: #333;
+        }
+
+        .nav-link:hover, .nav-link.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn.secondary {
+            background: #6c757d;
+        }
+
+        .grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .grid-2 {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .grid-3 {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .data-table th, .data-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .data-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .badge.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .badge.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+            }
+            
+            .nav-links {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="brand">SSM CDD/KYC Research Platform</div>
+            <div class="muted">HIT 400 · Forensic Accounting & Auditing · Zimbabwe PMPS</div>
+            <nav class="nav-links">
+                <button class="nav-link active" onclick="showSection('auth')">Authentication</button>
+                <button class="nav-link" onclick="showSection('kyc')">KYC Registration</button>
+                <button class="nav-link" onclick="showSection('survey')">Survey</button>
+                <button class="nav-link" onclick="showSection('miners')">Miners</button>
+                <button class="nav-link" onclick="showSection('dashboard')">Dashboard</button>
+            </nav>
+        </header>
+
+        <!-- Status Messages -->
+        <div id="statusMessage" class="status hidden"></div>
+
+        <!-- Authentication Section -->
+        <section id="auth-section" class="card">
+            <h2>Authentication</h2>
+            <div class="grid grid-2">
+                <div>
+                    <h3>Login</h3>
+                    <form id="loginForm">
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="loginEmail" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="loginPassword" required>
+                        </div>
+                        <button type="submit" class="btn">Login</button>
+                    </form>
+                </div>
+                <div>
+                    <h3>Register</h3>
+                    <form id="registerForm">
+                        <div class="form-group">
+                            <label>Full Name</label>
+                            <input type="text" id="registerName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input type="email" id="registerEmail" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="registerPassword" required>
+                        </div>
+                        <button type="submit" class="btn">Register</button>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- KYC Registration Section -->
+        <section id="kyc-section" class="card hidden">
+            <h2>KYC Registration</h2>
+            <form id="kycForm">
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label>Full Name *</label>
+                        <input type="text" id="kycFullName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Date of Birth *</label>
+                        <input type="date" id="kycDateOfBirth" required>
+                    </div>
+                    <div class="form-group">
+                        <label>National ID/Passport *</label>
+                        <input type="text" id="kycNationalId" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nationality *</label>
+                        <select id="kycNationality" required>
+                            <option value="Zimbabwean">Zimbabwean</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number *</label>
+                        <input type="tel" id="kycPhoneNumber" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" id="kycEmailAddress">
+                    </div>
+                    <div class="form-group">
+                        <label>Physical Address *</label>
+                        <textarea id="kycPhysicalAddress" rows="3" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Miner Category *</label>
+                        <select id="kycMinerCategory" required>
+                            <option value="">Select category</option>
+                            <option value="Individual Licence">Individual Licence</option>
+                            <option value="Cooperative">Cooperative</option>
+                            <option value="Company">Company</option>
+                            <option value="Syndicate">Syndicate</option>
+                            <option value="Diamond Dealer">Diamond Dealer</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Mining Licence No. *</label>
+                        <input type="text" id="kycMiningLicenceNo" required>
+                    </div>
+                    <div class="form-group">
+                        <label>FGR Registration No.</label>
+                        <input type="text" id="kycFgrRegistrationNo">
+                    </div>
+                    <div class="form-group">
+                        <label>MMCZ Registration No.</label>
+                        <input type="text" id="kycMmcRegistrationNo">
+                    </div>
+                    <div class="form-group">
+                        <label>Primary Operating Area *</label>
+                        <select id="kycPrimaryOperatingArea" required>
+                            <option value="">Select province</option>
+                            <option value="Mashonaland Central">Mashonaland Central</option>
+                            <option value="Mashonaland West">Mashonaland West</option>
+                            <option value="Mashonaland East">Mashonaland East</option>
+                            <option value="Midlands">Midlands</option>
+                            <option value="Manicaland">Manicaland</option>
+                            <option value="Matabeleland South">Matabeleland South</option>
+                            <option value="Matabeleland North">Matabeleland North</option>
+                            <option value="Bulawayo">Bulawayo</option>
+                            <option value="Harare">Harare</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Primary Mineral *</label>
+                        <select id="kycPrimaryMineral" required>
+                            <option value="">Select</option>
+                            <option value="Gold">Gold</option>
+                            <option value="Diamond">Diamond</option>
+                            <option value="Platinum">Platinum</option>
+                            <option value="Silver">Silver</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Operating As *</label>
+                        <select id="kycOperatingAs" required>
+                            <option value="Individual (sole operator)">Individual (sole operator)</option>
+                            <option value="Entity">Entity</option>
+                            <option value="Partnership">Partnership</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>PEP Status *</label>
+                        <select id="kycPepStatus" required>
+                            <option value="Not a PEP">Not a PEP</option>
+                            <option value="PEP - Domestic">PEP - Domestic</option>
+                            <option value="PEP - Foreign">PEP - Foreign</option>
+                            <option value="PEP - International Organisation">PEP - International Organisation</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>High-Risk Area *</label>
+                        <select id="kycHighRiskArea" required>
+                            <option value="No">No</option>
+                            <option value="Yes - Border area">Yes - Border area</option>
+                            <option value="Yes - Conflict zone">Yes - Conflict zone</option>
+                            <option value="Yes - High crime area">Yes - High crime area</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="grid-column: 1 / -1;">
+                        <label>Additional Risk Notes</label>
+                        <textarea id="kycAdditionalRiskNotes" rows="4"></textarea>
+                    </div>
+                </div>
+                <button type="submit" class="btn">Submit KYC Registration</button>
+            </form>
+        </section>
+
+        <!-- Survey Section -->
+        <section id="survey-section" class="card hidden">
+            <h2>Research Survey</h2>
+            <div id="surveyQuestions">
+                <p>Loading questions...</p>
+            </div>
+            <button id="submitSurvey" class="btn hidden">Submit Survey</button>
+        </section>
+
+        <!-- Miners Section -->
+        <section id="miners-section" class="card hidden">
+            <h2>Miner Registration</h2>
+            <form id="minerForm">
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label>Registration Reference *</label>
+                        <input type="text" id="minerRegistrationRef" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Province *</label>
+                        <select id="minerProvince" required>
+                            <option value="">Select province</option>
+                            <option value="Mashonaland Central">Mashonaland Central</option>
+                            <option value="Mashonaland West">Mashonaland West</option>
+                            <option value="Mashonaland East">Mashonaland East</option>
+                            <option value="Midlands">Midlands</option>
+                            <option value="Manicaland">Manicaland</option>
+                            <option value="Matabeleland South">Matabeleland South</option>
+                            <option value="Matabeleland North">Matabeleland North</option>
+                            <option value="Bulawayo">Bulawayo</option>
+                            <option value="Harare">Harare</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>District</label>
+                        <input type="text" id="minerDistrict">
+                    </div>
+                    <div class="form-group">
+                        <label>Years in Operation</label>
+                        <input type="number" id="minerYearsInOperation" min="0" max="50">
+                    </div>
+                    <div class="form-group">
+                        <label>Primary Commodity</label>
+                        <select id="minerPrimaryCommodity">
+                            <option value="">Select commodity</option>
+                            <option value="Gold">Gold</option>
+                            <option value="Diamond">Diamond</option>
+                            <option value="Platinum">Platinum</option>
+                            <option value="Silver">Silver</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn">Register Miner</button>
+            </form>
+        </section>
+
+        <!-- Dashboard Section -->
+        <section id="dashboard-section" class="card hidden">
+            <h2>Analytics Dashboard</h2>
+            <div class="form-group">
+                <label>API Secret (for analytics access)</label>
+                <input type="password" id="apiSecret" placeholder="Enter API secret">
+            </div>
+            <button onclick="loadDashboard()" class="btn">Load Dashboard</button>
+            <div id="dashboardContent"></div>
+        </section>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let authToken = localStorage.getItem('cdd_kyc_jwt');
+        let currentSection = 'auth';
+
+        // Navigation
+        function showSection(section) {
+            document.querySelectorAll('.card section').forEach(s => s.classList.add('hidden'));
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            
+            document.getElementById(`${section}-section`).classList.remove('hidden');
+            event.target.classList.add('active');
+            currentSection = section;
+
+            // Load data for specific sections
+            if (section === 'survey') loadSurveyQuestions();
+            if (section === 'dashboard') loadDashboard();
+        }
+
+        // Status messages
+        function showStatus(message, type = 'info') {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            statusEl.classList.remove('hidden');
+            
+            setTimeout(() => {
+                statusEl.classList.add('hidden');
+            }, 5000);
+        }
+
+        // API calls
+        async function apiCall(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
+                        ...options.headers
+                    },
+                    ...options
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    throw new Error(error || `HTTP ${response.status}`);
+                }
+
+                return await response.json();
+            } catch (error) {
+                showStatus(`API Error: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+
+        // Authentication
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const data = await apiCall('/auth/login', {
+                    method: 'POST',
+                    body: JSON.stringify({ email, password })
+                });
+
+                authToken = data.access_token;
+                localStorage.setItem('cdd_kyc_jwt', authToken);
+                showStatus('Login successful!', 'success');
+                
+                // Clear form
+                e.target.reset();
+            } catch (error) {
+                // Error already shown by apiCall
+            }
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const full_name = document.getElementById('registerName').value;
+
+            try {
+                const data = await apiCall('/auth/register', {
+                    method: 'POST',
+                    body: JSON.stringify({ email, password, full_name })
+                });
+
+                showStatus('Registration successful! Please login.', 'success');
+                e.target.reset();
+            } catch (error) {
+                // Error already shown by apiCall
+            }
+        });
+
+        // KYC Registration
+        document.getElementById('kycForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            if (!authToken) {
+                showStatus('Please login first', 'error');
+                return;
+            }
+
+            const kycData = {
+                full_name: document.getElementById('kycFullName').value,
+                date_of_birth: document.getElementById('kycDateOfBirth').value,
+                national_id: document.getElementById('kycNationalId').value,
+                nationality: document.getElementById('kycNationality').value,
+                phone_number: document.getElementById('kycPhoneNumber').value,
+                email_address: document.getElementById('kycEmailAddress').value,
+                physical_address: document.getElementById('kycPhysicalAddress').value,
+                miner_category: document.getElementById('kycMinerCategory').value,
+                mining_licence_no: document.getElementById('kycMiningLicenceNo').value,
+                fgr_registration_no: document.getElementById('kycFgrRegistrationNo').value,
+                mmc_registration_no: document.getElementById('kycMmcRegistrationNo').value,
+                primary_operating_area: document.getElementById('kycPrimaryOperatingArea').value,
+                primary_mineral: document.getElementById('kycPrimaryMineral').value,
+                operating_as: document.getElementById('kycOperatingAs').value,
+                pep_status: document.getElementById('kycPepStatus').value,
+                high_risk_area: document.getElementById('kycHighRiskArea').value,
+                additional_risk_notes: document.getElementById('kycAdditionalRiskNotes').value
+            };
+
+            try {
+                const data = await apiCall('/kyc/registrations', {
+                    method: 'POST',
+                    body: JSON.stringify(kycData)
+                });
+
+                showStatus('KYC registration submitted successfully!', 'success');
+                e.target.reset();
+            } catch (error) {
+                // Error already shown by apiCall
+            }
+        });
+
+        // Miner Registration
+        document.getElementById('minerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const minerData = {
+                registration_ref: document.getElementById('minerRegistrationRef').value,
+                province: document.getElementById('minerProvince').value,
+                district: document.getElementById('minerDistrict').value || null,
+                years_in_operation: parseInt(document.getElementById('minerYearsInOperation').value) || null,
+                primary_commodity: document.getElementById('minerPrimaryCommodity').value || null
+            };
+
+            try {
+                const data = await apiCall('/miners', {
+                    method: 'POST',
+                    body: JSON.stringify(minerData)
+                });
+
+                showStatus('Miner registered successfully!', 'success');
+                e.target.reset();
+            } catch (error) {
+                // Error already shown by apiCall
+            }
+        });
+
+        // Survey Questions
+        async function loadSurveyQuestions() {
+            try {
+                const questions = await apiCall('/questions');
+                const container = document.getElementById('surveyQuestions');
+                const submitBtn = document.getElementById('submitSurvey');
+                
+                container.innerHTML = questions.map((q, index) => `
+                    <div class="form-group">
+                        <label>${index + 1}. ${q.text}</label>
+                        ${q.question_type === 'likert' ? 
+                            `<select id="question_${q.id}">
+                                <option value="">Select response</option>
+                                <option value="1">Strongly Disagree</option>
+                                <option value="2">Disagree</option>
+                                <option value="3">Neutral</option>
+                                <option value="4">Agree</option>
+                                <option value="5">Strongly Agree</option>
+                            </select>` :
+                            `<select id="question_${q.id}">
+                                <option value="">Select response</option>
+                                <option value="true">Yes</option>
+                                <option value="false">No</option>
+                            </select>`
+                        }
+                    </div>
+                `).join('');
+
+                submitBtn.classList.remove('hidden');
+                submitBtn.onclick = submitSurvey;
+            } catch (error) {
+                document.getElementById('surveyQuestions').innerHTML = '<p>Failed to load questions</p>';
+            }
+        }
+
+        async function submitSurvey() {
+            try {
+                const questions = await apiCall('/questions');
+                const answers = questions.map(q => {
+                    const value = document.getElementById(`question_${q.id}`).value;
+                    return {
+                        question_id: q.id,
+                        ...(q.question_type === 'likert' ? 
+                            { likert_value: value ? parseInt(value) : null } :
+                            { bool_value: value ? value === 'true' : null }
+                        )
+                    };
+                });
+
+                const data = await apiCall('/surveys/responses', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        miner_id: null,
+                        notes: null,
+                        answers
+                    })
+                });
+
+                showStatus('Survey submitted successfully!', 'success');
+            } catch (error) {
+                // Error already shown by apiCall
+            }
+        }
+
+        // Dashboard
+        async function loadDashboard() {
+            const apiSecret = document.getElementById('apiSecret').value;
+            if (!apiSecret) {
+                showStatus('Please enter API secret', 'error');
+                return;
+            }
+
+            try {
+                const data = await apiCall('/analytics/summary', {
+                    headers: { 'X-API-Secret': apiSecret }
+                });
+
+                const content = document.getElementById('dashboardContent');
+                content.innerHTML = `
+                    <h3>Research Summary</h3>
+                    <div class="grid grid-3">
+                        <div class="card">
+                            <h4>Total Miners</h4>
+                            <p style="font-size: 2rem; font-weight: bold;">${data.total_miners || 0}</p>
+                        </div>
+                        <div class="card">
+                            <h4>Total KYC Registrations</h4>
+                            <p style="font-size: 2rem; font-weight: bold;">${data.total_kyc_registrations || 0}</p>
+                        </div>
+                        <div class="card">
+                            <h4>Total Survey Responses</h4>
+                            <p style="font-size: 2rem; font-weight: bold;">${data.total_survey_responses || 0}</p>
+                        </div>
+                    </div>
+                    <h4>Recent Activity</h4>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Date</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${data.recent_activity ? data.recent_activity.map(activity => `
+                                <tr>
+                                    <td>${activity.type}</td>
+                                    <td>${new Date(activity.date).toLocaleDateString()}</td>
+                                    <td><span class="badge ${activity.status}">${activity.status}</span></td>
+                                </tr>
+                            `).join('') : '<tr><td colspan="3">No recent activity</td></tr>'}
+                        </tbody>
+                    </table>
+                `;
+            } catch (error) {
+                document.getElementById('dashboardContent').innerHTML = '<p>Failed to load dashboard data</p>';
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            showStatus('Frontend loaded. Backend should be running on http://localhost:8000', 'info');
+        });
+    </script>
+</body>
+</html>

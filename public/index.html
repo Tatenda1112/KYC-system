@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KYC/CDD Registration - Zimbabwe Small-Scale Miners</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .form-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        .section-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .form-input {
+            transition: all 0.3s ease;
+        }
+        .form-input:focus {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+        .error-message {
+            animation: shake 0.5s;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        .loading-spinner {
+            display: none;
+        }
+        .loading-spinner.active {
+            display: inline-block;
+        }
+        .beneficial-owner-row {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <i class="fas fa-hard-hat text-3xl"></i>
+                    <div>
+                        <h1 class="text-2xl font-bold">KYC/CDD Registration System</h1>
+                        <p class="text-sm opacity-90">Zimbabwe Small-Scale Miners Registration Portal</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm">Customer Due Diligence & Know Your Customer</p>
+                    <p class="text-xs opacity-75">Regulatory Compliance Platform</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 py-8">
+        <!-- Progress Indicator -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between max-w-4xl mx-auto">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-bold">1</div>
+                    <span class="ml-2 text-sm font-medium">Personal Info</span>
+                </div>
+                <div class="flex-1 h-1 bg-gray-300 mx-2"></div>
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-sm font-bold">2</div>
+                    <span class="ml-2 text-sm text-gray-600">Licensing</span>
+                </div>
+                <div class="flex-1 h-1 bg-gray-300 mx-2"></div>
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-sm font-bold">3</div>
+                    <span class="ml-2 text-sm text-gray-600">Ownership</span>
+                </div>
+                <div class="flex-1 h-1 bg-gray-300 mx-2"></div>
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-gray-300 text-gray-600 rounded-full flex items-center justify-center text-sm font-bold">4</div>
+                    <span class="ml-2 text-sm text-gray-600">Risk Review</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Registration Form -->
+        <div class="max-w-4xl mx-auto">
+            <form id="registrationForm" class="space-y-8">
+                <!-- Section 1: Personal & Identity Information -->
+                <div class="form-section p-8">
+                    <div class="section-card p-6">
+                        <div class="flex items-center mb-6">
+                            <i class="fas fa-user-circle text-3xl text-blue-600 mr-3"></i>
+                            <h2 class="text-2xl font-bold text-gray-800">01 — Personal Details</h2>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="form-group">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Full Name <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" id="fullName" name="fullName" required
+                                    class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="e.g. Moyo, Blessing Takudzwa">
+                                <span class="text-red-500 text-sm hidden error-message"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Date of Birth <span class="text-red-500">*</span>
+                                </label>
+                                <input type="date" id="dateOfBirth" name="dateOfBirth" required
+                                    class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <span class="text-red-500 text-sm hidden error-message"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    National ID / Passport No. <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" id="nationalId" name="nationalId" required
+                                    class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="e.g. 63-123456A21">
+                                <span class="text-red-500 text-sm hidden error-message"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Nationality <span class="text-red-500">*</span>
+                                </label>
+                                <select id="nationality" name="nationality" required
+                                    class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="Zimbabwean">Zimbabwean</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <span class="text-red-500 text-sm hidden error-message"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Phone Number <span class="text-red-500">*</span>
+                                </label>
+                                <input type="tel" id="phoneNumber" name="phoneNumber" required
+                                    class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="+263 77 xxx xxxx">
+                                <span class="text-red-500 text-sm hidden error-message"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Email Address <span class="text-gray-400">(optional)</span>
+                                </label>
+                                <input type="email" id="emailAddress" name="emailAddress"
+                                    class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="optional">
+                                <span class="text-red-500 text-sm hidden error-message"></span>
+                            </div>
+
+                            <div class="form-group md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Physical Address <span class="text-red-500">*</span>
+                                </label>
+                                <textarea id="physicalAddress" name="physicalAddress" required rows="3"
+                                    class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="Physical/residential address"></textarea>
+                                <span class="text-red-500 text-sm hidden error-message"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 2: Licensing & Registration -->
+                <div class="form-section p-8">
+                    <div class="section-card p-6">
+                        <div class="flex items-center mb-6">
+                            <i class="fas fa-certificate text-3xl text-green-600 mr-3"></i>
+                            <h2 class="text-2xl font-bold text-gray-800">02 — Licensing & Registration</h2>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="form-group">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Miner Category <span class="text-red-500">*</span>
+                                </label>
+                                <select id="minerCategory" name="minerCategory" required
+                                    class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="">Select category</option>
+                                    <option value="Individual Licence">Individual Licence</option>
+                                    <option value="Cooperative">Cooperative</option>
+                                    <option value="Company">Company</option>
+                                    <option value="Syndicate">Syndicate</option>
+                                    <option value="Diamond Dealer">Diamond Dealer</option>
+                                </select>
+                                <span class="text-red-500 text-sm hidden error-message"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Mining Licence No. <span class="text-red-500">*</span>
+                                </label>
+                                <input type="text" id="miningLicenceNo" name="miningLicenceNo" required
+                                    class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="e.g. ML/G/2023/00412">
+                                <span class="text-red-500 text-sm hidden error-message"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    FGR Registration No. <span class="text-gray-400">(if applicable)</span>
+                                </label>
+                                <input type="text" id="fgrRegistrationNo" name="fgrRegistrationNo"
+                                    class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="if applicable">
+                                <span class="text-red-500 text-sm hidden error-message"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    MMCZ Registration No. <span class="text-gray-400">(for diamond dealers)</span>
+                                </label>
+                                <input type="text" id="mmcRegistrationNo" name="mmcRegistrationNo"
+                                    class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="for diamond dealers">
+                                <span class="text-red-500 text-sm hidden error-message"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Primary Operating Area <span class="text-red-500">*</span>
+                                </label>
+                                <select id="primaryOperatingArea" name="primaryOperatingArea" required
+                                    class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="">Select province</option>
+                                    <option value="Mashonaland Central">Mashonaland Central</option>
+                                    <option value="Mashonaland West">Mashonaland West</option>
+                                    <option value="Mashonaland East">Mashonaland East</option>
+                                    <option value="Midlands">Midlands</option>
+                                    <option value="Manicaland">Manicaland</option>
+                                    <option value="Matabeleland South">Matabeleland South</option>
+                                    <option value="Matabeleland North">Matabeleland North</option>
+                                    <option value="Bulawayo">Bulawayo</option>
+                                    <option value="Harare">Harare</option>
+                                </select>
+                                <span class="text-red-500 text-sm hidden error-message"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Primary Mineral <span class="text-red-500">*</span>
+                                </label>
+                                <select id="primaryMineral" name="primaryMineral" required
+                                    class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="">Select</option>
+                                    <option value="Gold">Gold</option>
+                                    <option value="Diamond">Diamond</option>
+                                    <option value="Platinum">Platinum</option>
+                                    <option value="Silver">Silver</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                                <span class="text-red-500 text-sm hidden error-message"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 3: Beneficial Ownership -->
+                <div class="form-section p-8">
+                    <div class="section-card p-6">
+                        <div class="flex items-center mb-6">
+                            <i class="fas fa-users text-3xl text-purple-600 mr-3"></i>
+                            <h2 class="text-2xl font-bold text-gray-800">03 — Beneficial Ownership Declaration</h2>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 gap-6">
+                            <div class="form-group">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Operating as <span class="text-red-500">*</span>
+                                </label>
+                                <select id="operatingAs" name="operatingAs" required
+                                    class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="Individual (sole operator)">Individual (sole operator)</option>
+                                    <option value="Entity">Entity</option>
+                                    <option value="Partnership">Partnership</option>
+                                </select>
+                                <span class="text-red-500 text-sm hidden error-message"></span>
+                            </div>
+
+                            <div id="beneficialOwnersSection" class="hidden">
+                                <div class="flex items-center justify-between mb-4">
+                                    <label class="block text-sm font-medium text-gray-700">
+                                        Beneficial Owner(s) — if entity differs from registrant
+                                    </label>
+                                    <p class="text-xs text-gray-500">List names and ID numbers of all beneficial owners with >25% interest</p>
+                                </div>
+                                
+                                <div id="beneficialOwnersList" class="space-y-4">
+                                    <!-- Beneficial owners will be added here dynamically -->
+                                </div>
+                                
+                                <button type="button" id="addBeneficialOwner" 
+                                    class="mt-4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors">
+                                    <i class="fas fa-plus mr-2"></i>Add Beneficial Owner
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section 4: Risk Indicators -->
+                <div class="form-section p-8">
+                    <div class="section-card p-6">
+                        <div class="flex items-center mb-6">
+                            <i class="fas fa-exclamation-triangle text-3xl text-yellow-600 mr-3"></i>
+                            <h2 class="text-2xl font-bold text-gray-800">04 — Risk Indicators</h2>
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="form-group">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    PEP Status <span class="text-red-500">*</span>
+                                </label>
+                                <select id="pepStatus" name="pepStatus" required
+                                    class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="Not a PEP">Not a PEP</option>
+                                    <option value="PEP - Domestic">PEP - Domestic</option>
+                                    <option value="PEP - Foreign">PEP - Foreign</option>
+                                    <option value="PEP - International Organisation">PEP - International Organisation</option>
+                                </select>
+                                <span class="text-red-500 text-sm hidden error-message"></span>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Operating in High-Risk Area? <span class="text-red-500">*</span>
+                                </label>
+                                <select id="highRiskArea" name="highRiskArea" required
+                                    class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                    <option value="No">No</option>
+                                    <option value="Yes - Border area">Yes - Border area</option>
+                                    <option value="Yes - Conflict zone">Yes - Conflict zone</option>
+                                    <option value="Yes - High crime area">Yes - High crime area</option>
+                                </select>
+                                <span class="text-red-500 text-sm hidden error-message"></span>
+                            </div>
+
+                            <div class="form-group md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">
+                                    Additional Risk Notes
+                                </label>
+                                <textarea id="additionalRiskNotes" name="additionalRiskNotes" rows="4"
+                                    class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                    placeholder="Any other relevant compliance notes or flags observed during onboarding..."></textarea>
+                                <span class="text-red-500 text-sm hidden error-message"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="flex justify-between items-center">
+                    <button type="button" id="clearForm" 
+                        class="px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                        <i class="fas fa-eraser mr-2"></i>Clear Form
+                    </button>
+                    
+                    <button type="submit" id="submitBtn"
+                        class="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all transform hover:scale-105">
+                        <i class="fas fa-check-circle mr-2"></i>
+                        <span class="submit-text">Submit Registration</span>
+                        <i class="fas fa-spinner fa-spin loading-spinner ml-2"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <!-- Success Modal -->
+    <div id="successModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4 transform transition-all">
+            <div class="text-center">
+                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-check text-green-600 text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Registration Submitted Successfully!</h3>
+                <p class="text-gray-600 mb-6">Your application has been received and is under review. You will be notified of the decision.</p>
+                <div id="registrationDetails" class="bg-gray-50 rounded-lg p-4 mb-6 text-left hidden">
+                    <!-- Registration details will be populated here -->
+                </div>
+                <button onclick="closeSuccessModal()" 
+                    class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="errorModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4 transform transition-all">
+            <div class="text-center">
+                <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-exclamation-triangle text-red-600 text-2xl"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-900 mb-2">Registration Error</h3>
+                <p id="errorMessage" class="text-gray-600 mb-6">An error occurred during registration. Please try again.</p>
+                <button onclick="closeErrorModal()" 
+                    class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
