@@ -33,6 +33,15 @@ def run_startup_migrations() -> None:
         if "account_email" not in existing_registration_columns:
             statements.append("ALTER TABLE miner_registrations ADD COLUMN account_email VARCHAR(255)")
 
+    if "customers" in tables:
+        existing_customer_columns = {
+            column["name"] for column in inspector.get_columns("customers")
+        }
+        if "employer" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN employer VARCHAR(200)")
+        if "place_of_work" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN place_of_work VARCHAR(200)")
+
     if "gold_transactions" in tables:
         existing_txn_columns = {
             column["name"] for column in inspector.get_columns("gold_transactions")
@@ -48,7 +57,7 @@ def run_startup_migrations() -> None:
         if "customer_id_number" not in existing_txn_columns:
             statements.append("ALTER TABLE gold_transactions ADD COLUMN customer_id_number VARCHAR(80)")
 
-    if not statements and "miner_registrations" not in tables:
+    if not statements:
         return
 
     with engine.begin() as conn:

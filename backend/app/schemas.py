@@ -264,6 +264,8 @@ class CustomerCreate(BaseModel):
     email: str | None = Field(None, max_length=255)
     physical_address: str | None = None
     occupation: str | None = Field(None, max_length=120)
+    employer: str | None = Field(None, max_length=200)
+    place_of_work: str | None = Field(None, max_length=200)
     source_of_funds: str | None = Field(None, max_length=200)
     purpose_of_purchase: str | None = Field(None, max_length=200)
     politically_exposed: bool = False
@@ -271,7 +273,7 @@ class CustomerCreate(BaseModel):
 
     @field_validator(
         "phone_number", "email", "physical_address", "occupation",
-        "source_of_funds", "purpose_of_purchase", "pep_details",
+        "employer", "place_of_work", "source_of_funds", "purpose_of_purchase", "pep_details",
         mode="before",
     )
     @classmethod
@@ -294,6 +296,8 @@ class CustomerOut(BaseModel):
     email: str | None
     physical_address: str | None
     occupation: str | None
+    employer: str | None
+    place_of_work: str | None
     source_of_funds: str | None
     purpose_of_purchase: str | None
     politically_exposed: bool
@@ -313,6 +317,8 @@ class CustomerUpdate(BaseModel):
     email: str | None = Field(None, max_length=255)
     physical_address: str | None = None
     occupation: str | None = Field(None, max_length=120)
+    employer: str | None = Field(None, max_length=200)
+    place_of_work: str | None = Field(None, max_length=200)
     source_of_funds: str | None = Field(None, max_length=200)
     purpose_of_purchase: str | None = Field(None, max_length=200)
     politically_exposed: bool | None = None
@@ -320,7 +326,7 @@ class CustomerUpdate(BaseModel):
 
     @field_validator(
         "phone_number", "email", "physical_address", "occupation",
-        "source_of_funds", "purpose_of_purchase", "pep_details",
+        "employer", "place_of_work", "source_of_funds", "purpose_of_purchase", "pep_details",
         mode="before",
     )
     @classmethod
@@ -343,6 +349,8 @@ class CustomerAdminRow(BaseModel):
     email: str | None
     physical_address: str | None
     occupation: str | None
+    employer: str | None
+    place_of_work: str | None
     source_of_funds: str | None
     purpose_of_purchase: str | None
     politically_exposed: bool

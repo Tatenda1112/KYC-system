@@ -75,6 +75,8 @@ export default function AddCustomerPage() {
   const [email, setEmail] = useState('');
   const [address, setAddress] = useState('');
   const [occupation, setOccupation] = useState('');
+  const [employer, setEmployer] = useState('');
+  const [placeOfWork, setPlaceOfWork] = useState('');
   const [sourceOfFunds, setSourceOfFunds] = useState('');
   const [purposeOfPurchase, setPurposeOfPurchase] = useState('');
   const [politicallyExposed, setPoliticallyExposed] = useState(false);
@@ -165,6 +167,8 @@ export default function AddCustomerPage() {
       email: email.trim() || null,
       physical_address: address.trim() || null,
       occupation: occupation.trim() || null,
+      employer: employer.trim() || null,
+      place_of_work: placeOfWork.trim() || null,
       source_of_funds: sourceOfFunds.trim() || null,
       purpose_of_purchase: purposeOfPurchase || null,
       politically_exposed: politicallyExposed,
@@ -375,7 +379,7 @@ export default function AddCustomerPage() {
                   />
                 </div>
 
-                {/* Row 3 */}
+                {/* Row 3 — Occupation & Source of funds */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs text-gray-500 mb-1 block">Occupation</label>
@@ -395,6 +399,30 @@ export default function AddCustomerPage() {
                       onChange={e => setSourceOfFunds(e.target.value)}
                       className={`${inputBase} border-gray-200`}
                       placeholder="e.g. Business income, Salary"
+                    />
+                  </div>
+                </div>
+
+                {/* Row 4 — Employer & Place of work */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Employer</label>
+                    <input
+                      type="text"
+                      value={employer}
+                      onChange={e => setEmployer(e.target.value)}
+                      className={`${inputBase} border-gray-200`}
+                      placeholder="e.g. Fidelity Gold Refinery"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Place of work</label>
+                    <input
+                      type="text"
+                      value={placeOfWork}
+                      onChange={e => setPlaceOfWork(e.target.value)}
+                      className={`${inputBase} border-gray-200`}
+                      placeholder="e.g. Kwekwe Industrial Area"
                     />
                   </div>
                 </div>

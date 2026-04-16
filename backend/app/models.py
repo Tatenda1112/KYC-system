@@ -210,6 +210,8 @@ class Customer(Base):
     email: Mapped[str | None] = mapped_column(String(255), nullable=True)
     physical_address: Mapped[str | None] = mapped_column(Text, nullable=True)
     occupation: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    employer: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    place_of_work: Mapped[str | None] = mapped_column(String(200), nullable=True)
     source_of_funds: Mapped[str | None] = mapped_column(String(200), nullable=True)
     purpose_of_purchase: Mapped[str | None] = mapped_column(String(200), nullable=True)
 
