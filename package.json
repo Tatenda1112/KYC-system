@@ -6,6 +6,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "dev-next": "next dev",
     "client": "cd client && npm start",
     "build": "cd client && npm run build",
     "next-dev": "next dev",

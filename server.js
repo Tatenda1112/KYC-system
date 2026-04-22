@@ -30,12 +30,12 @@ const limiter = rateLimit({
 app.use('/api/register', limiter);
 
 // Database connection
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('Connected to MongoDB'))
-.catch(err => console.error('MongoDB connection error:', err));
+mongoose.connect(process.env.MONGODB_URI)
+  .then(async () => {
+    console.log('Connected to MongoDB');
+    await createAdminAccount();
+  })
+  .catch(err => console.error('MongoDB connection error:', err));
 
 // User Schema for Authentication
 const UserSchema = new mongoose.Schema({
@@ -49,7 +49,7 @@ const UserSchema = new mongoose.Schema({
 const User = mongoose.model('User', UserSchema);
 
 // Create hardcoded admin account
-const createAdminAccount = async () => {
+async function createAdminAccount() {
   try {
     const existingAdmin = await User.findOne({ email: 'tatendatatenda1112@gmail.com' });
     if (!existingAdmin) {
@@ -66,10 +66,7 @@ const createAdminAccount = async () => {
   } catch (error) {
     console.error('Error creating admin account:', error);
   }
-};
-
-// Call the function to create admin account
-createAdminAccount();
+}
 
 // Authentication endpoints
 // Login endpoint

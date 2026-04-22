@@ -169,8 +169,6 @@ const MinerSchema = new mongoose.Schema({
 });
 
 // Index for faster queries
-MinerSchema.index({ nationalId: 1 });
-MinerSchema.index({ miningLicenceNo: 1 });
 MinerSchema.index({ registrationStatus: 1 });
 MinerSchema.index({ registrationDate: -1 });
 
