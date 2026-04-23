@@ -4,10 +4,11 @@ const BACKEND = 'http://localhost:8000';
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const res = await fetch(`${BACKEND}/customers/${params.id}`, { cache: 'no-store' });
+    const { id } = await params;
+    const res = await fetch(`${BACKEND}/customers/${id}`, { cache: 'no-store' });
     const data = await res.json();
     return NextResponse.json(data, { status: res.status });
   } catch (err) {
@@ -18,11 +19,12 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
-    const res = await fetch(`${BACKEND}/customers/${params.id}`, {
+    const res = await fetch(`${BACKEND}/customers/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),

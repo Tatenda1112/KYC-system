@@ -401,6 +401,38 @@ class CustomerAdminRow(BaseModel):
     miner_district: str | None = None
 
 
+class CustomerProfileTransactionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    created_at: datetime
+    transaction_date: date
+    gold_weight_grams: float
+    sale_amount_usd: float
+    buying_centre: str
+    buyer_name: str
+    payment_method: str
+    buyer_verified: bool
+    cdd_completed: bool
+    is_flagged: bool
+    flag_reason: str | None
+    miner_reg_number: str | None
+
+
+class CustomerProfileOut(BaseModel):
+    customer: CustomerOut
+    miner_full_name: str | None = None
+    miner_district: str | None = None
+    transaction_count: int
+    total_spend_usd: float
+    average_spend_usd: float
+    average_gold_weight_grams: float
+    largest_transaction_usd: float
+    last_90d_transaction_count: int
+    last_90d_spend_usd: float
+    transactions: list[CustomerProfileTransactionOut]
+
+
 # ── Gold Sale Transactions ─────────────────────────────────────────────────────
 
 class GoldTransactionCreate(BaseModel):

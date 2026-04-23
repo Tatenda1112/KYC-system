@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
@@ -148,6 +148,13 @@ export default function AdminCompliancePage() {
               {loading ? '…' : `${overview?.total_miners ?? 0} miners`}
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => router.push('/admin/compliance/customers')}
+            className="text-xs border border-gray-200 rounded px-3 py-1.5 text-gray-600 hover:bg-gray-50"
+          >
+            View all customers
+          </button>
         </div>
 
         <div className="flex-1 overflow-auto bg-gray-50">

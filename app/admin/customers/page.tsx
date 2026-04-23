@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '../../../components/Sidebar';
-import { fmtDate } from '../../../lib/date';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -231,7 +230,7 @@ export default function AdminCustomersPage() {
                     <tr
                       key={c.id}
                       className={`border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${c.is_flagged ? 'bg-gray-50' : ''}`}
-                      onClick={() => router.push(`/admin/miners/${c.miner_reg_number ?? ''}`)}
+                      onClick={() => router.push(`/admin/customers/${c.id}`)}
                     >
                       <td className="py-2.5 px-3 text-xs text-gray-800 font-medium truncate">
                         {c.full_name}

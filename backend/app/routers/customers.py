@@ -1,11 +1,19 @@
-from datetime import date as dt_date
+from datetime import date as dt_date, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import func as sqlfunc
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Customer, MinerRegistration
-from app.schemas import CustomerAdminRow, CustomerCreate, CustomerOut, CustomerUpdate
+from app.models import Customer, GoldTransaction, MinerRegistration
+from app.schemas import (
+    CustomerAdminRow,
+    CustomerCreate,
+    CustomerOut,
+    CustomerProfileOut,
+    CustomerProfileTransactionOut,
+    CustomerUpdate,
+)
 
 router = APIRouter(prefix="/customers", tags=["customers"])
 
@@ -109,6 +117,74 @@ def list_customers_admin(
             )
         )
     return rows
+
+
+@router.get("/{customer_id}/profile", response_model=CustomerProfileOut)
+def get_customer_profile(
+    customer_id: int,
+    limit: int = Query(20, ge=1, le=200),
+    db: Session = Depends(get_db),
+) -> CustomerProfileOut:
+    customer = db.get(Customer, customer_id)
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    miner: MinerRegistration | None = None
+    if customer.miner_reg_number:
+        miner = (
+            db.query(MinerRegistration)
+            .filter(MinerRegistration.reg_number == customer.miner_reg_number)
+            .first()
+        )
+
+    txn_count, txn_total, txn_avg, gold_avg, txn_max = (
+        db.query(
+            sqlfunc.count(GoldTransaction.id),
+            sqlfunc.coalesce(sqlfunc.sum(GoldTransaction.sale_amount_usd), 0.0),
+            sqlfunc.coalesce(sqlfunc.avg(GoldTransaction.sale_amount_usd), 0.0),
+            sqlfunc.coalesce(sqlfunc.avg(GoldTransaction.gold_weight_grams), 0.0),
+            sqlfunc.coalesce(sqlfunc.max(GoldTransaction.sale_amount_usd), 0.0),
+        )
+        .filter(GoldTransaction.customer_id == customer_id)
+        .one()
+    )
+
+    cutoff_date = dt_date.today() - timedelta(days=90)
+    recent_count, recent_total = (
+        db.query(
+            sqlfunc.count(GoldTransaction.id),
+            sqlfunc.coalesce(sqlfunc.sum(GoldTransaction.sale_amount_usd), 0.0),
+        )
+        .filter(
+            GoldTransaction.customer_id == customer_id,
+            GoldTransaction.transaction_date >= cutoff_date,
+        )
+        .one()
+    )
+
+    transactions = (
+        db.query(GoldTransaction)
+        .filter(GoldTransaction.customer_id == customer_id)
+        .order_by(GoldTransaction.transaction_date.desc(), GoldTransaction.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    return CustomerProfileOut(
+        customer=CustomerOut.model_validate(customer),
+        miner_full_name=miner.full_name if miner else None,
+        miner_district=miner.district if miner else None,
+        transaction_count=int(txn_count or 0),
+        total_spend_usd=float(txn_total or 0.0),
+        average_spend_usd=float(txn_avg or 0.0),
+        average_gold_weight_grams=float(gold_avg or 0.0),
+        largest_transaction_usd=float(txn_max or 0.0),
+        last_90d_transaction_count=int(recent_count or 0),
+        last_90d_spend_usd=float(recent_total or 0.0),
+        transactions=[
+            CustomerProfileTransactionOut.model_validate(txn) for txn in transactions
+        ],
+    )
 
 
 @router.post("", response_model=CustomerOut, status_code=201)
