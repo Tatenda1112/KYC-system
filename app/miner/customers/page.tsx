@@ -27,9 +27,9 @@ function getInitials(name: string) {
 }
 
 const RISK_STYLE: Record<string, string> = {
-  high: 'text-xs text-gray-900 font-medium',
-  medium: 'text-xs text-gray-500',
-  low: 'text-xs text-gray-300',
+  high: 'text-xs text-red-700 font-semibold',
+  medium: 'text-xs text-amber-700 font-semibold',
+  low: 'text-xs text-emerald-700 font-semibold',
 };
 
 export default function MinerCustomersPage() {
@@ -124,7 +124,7 @@ export default function MinerCustomersPage() {
         <Sidebar role="miner" activePage="mycustomers" userName={minerName || undefined} kycStatus={minerKycStatus} />
         <div className="flex-1 flex flex-col overflow-hidden">
           <div className="h-12 bg-white border-b border-gray-100 flex items-center px-5">
-            <div className="text-sm font-medium text-gray-800">My customers</div>
+            <div className="text-sm font-semibold text-slate-900">My customers</div>
           </div>
           <div className="flex-1 flex items-center justify-center bg-gray-50">
             <div className="text-center max-w-sm">
@@ -148,7 +148,7 @@ export default function MinerCustomersPage() {
         {/* TOPBAR */}
         <div className="h-12 bg-white border-b border-gray-100 flex items-center justify-between px-5">
           <div className="flex items-center gap-2">
-            <div className="text-sm font-medium text-gray-800">My customers</div>
+            <div className="text-sm font-semibold text-slate-900">My customers</div>
             {!loading && (
               <div className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
                 {customers.length}
@@ -254,12 +254,12 @@ export default function MinerCustomersPage() {
                   {/* Right */}
                   <div className="flex items-center gap-2">
                     {c.is_flagged && (
-                      <span className="bg-gray-900 text-white text-xs px-2 py-0.5 rounded">
+                      <span className="bg-red-100 text-red-800 border border-red-300 text-xs px-2 py-0.5 rounded">
                         Flagged
                       </span>
                     )}
                     {c.politically_exposed && (
-                      <span className="bg-gray-200 text-gray-600 text-xs px-2 py-0.5 rounded">
+                      <span className="bg-amber-100 text-amber-800 border border-amber-300 text-xs px-2 py-0.5 rounded">
                         PEP
                       </span>
                     )}

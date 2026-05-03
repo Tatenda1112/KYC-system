@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import Customer, GoldTransaction, MinerRegistration
+from app.audit_utils import log_event
 from app.schemas import (
     CustomerAdminRow,
     CustomerCreate,
@@ -18,19 +19,87 @@ from app.schemas import (
 router = APIRouter(prefix="/customers", tags=["customers"])
 
 
-def _assess_risk(politically_exposed: bool, known_sanctions: bool) -> tuple[str, bool, str | None]:
+def _assess_risk(payload: CustomerCreate | CustomerUpdate | Customer) -> tuple[str, bool, str | None]:
     """Return (risk_level, is_flagged, flag_reason) based on customer profile."""
     reasons: list[str] = []
-    if politically_exposed:
-        reasons.append("Politically exposed person (PEP) — requires enhanced due diligence")
-    if known_sanctions:
-        reasons.append("Known sanctions — transaction prohibited until cleared")
+    pep = bool(getattr(payload, "politically_exposed", False))
+    sanctioned = bool(getattr(payload, "known_sanctions", False))
+    minor = bool(getattr(payload, "is_minor", False))
+    pep_docs_missing = pep and (
+        not getattr(payload, "proof_of_residence_ref", None)
+        or not getattr(payload, "financial_statements_ref", None)
+        or not getattr(payload, "pep_source_of_wealth_explained", False)
+    )
+
+    if pep:
+        reasons.append("Politically exposed person (PEP) - enhanced due diligence required")
+    if pep_docs_missing:
+        reasons.append("PEP enhanced due diligence documentation is incomplete")
+    if sanctioned:
+        reasons.append("Known sanctions - transaction prohibited until cleared")
+    if minor:
+        reasons.append("Minor customer - guardian verification required")
+
     if reasons:
         return "high", True, "; ".join(reasons)
     return "medium", False, None
 
 
+def _next_customer_number(db: Session) -> str:
+    year = dt_date.today().year
+    prefix = f"CUST-{year}-"
+    latest = (
+        db.query(Customer.customer_number)
+        .filter(Customer.customer_number.isnot(None), Customer.customer_number.like(f"{prefix}%"))
+        .order_by(Customer.customer_number.desc())
+        .first()
+    )
+    if latest and latest[0]:
+        try:
+            seq = int(latest[0].split("-")[-1]) + 1
+        except ValueError:
+            seq = 1
+    else:
+        seq = 1
+    return f"{prefix}{seq:05d}"
+
+
+def _validate_customer_compliance(payload: CustomerCreate | CustomerUpdate | Customer) -> None:
+    if getattr(payload, "politically_exposed", False):
+        missing: list[str] = []
+        if not getattr(payload, "pep_details", None):
+            missing.append("PEP details")
+        if not getattr(payload, "pep_position", None):
+            missing.append("PEP position")
+        if not getattr(payload, "proof_of_residence_ref", None):
+            missing.append("proof of residence reference")
+        if not getattr(payload, "financial_statements_ref", None):
+            missing.append("financial statements reference")
+        if not getattr(payload, "pep_source_of_wealth_explained", False):
+            missing.append("source of wealth confirmation")
+        if missing:
+            raise HTTPException(
+                status_code=400,
+                detail=f"PEP enhanced due diligence is incomplete: {', '.join(missing)}",
+            )
+
+    if getattr(payload, "is_minor", False):
+        missing_guardian: list[str] = []
+        if not getattr(payload, "guardian_full_name", None):
+            missing_guardian.append("guardian full name")
+        if not getattr(payload, "guardian_national_id", None):
+            missing_guardian.append("guardian ID number")
+        if not getattr(payload, "guardian_phone", None):
+            missing_guardian.append("guardian phone")
+        if missing_guardian:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Minor customer requires guardian details: {', '.join(missing_guardian)}",
+            )
+
+
 # /check and /admin MUST come before /{customer_id} to avoid being parsed as int IDs
+
 
 @router.get("/check", response_model=CustomerOut | None)
 def check_customer(
@@ -38,10 +107,6 @@ def check_customer(
     miner_reg_number: str | None = Query(None),
     db: Session = Depends(get_db),
 ) -> Customer | None:
-    """Check if a customer with this national ID already exists.
-
-    If miner_reg_number is given, scope the search to that miner's customers.
-    """
     q = db.query(Customer).filter(Customer.national_id == national_id)
     if miner_reg_number:
         q = q.filter(Customer.miner_reg_number == miner_reg_number)
@@ -55,7 +120,6 @@ def list_customers_admin(
     search: str | None = None,
     db: Session = Depends(get_db),
 ) -> list[CustomerAdminRow]:
-    """Admin endpoint: returns all customers enriched with linked miner name/district."""
     q = db.query(Customer)
     if risk_level:
         q = q.filter(Customer.risk_level == risk_level)
@@ -63,20 +127,13 @@ def list_customers_admin(
         q = q.filter(Customer.is_flagged.is_(is_flagged))
     if search:
         term = f"%{search}%"
-        q = q.filter(
-            Customer.full_name.ilike(term) | Customer.national_id.ilike(term)
-        )
+        q = q.filter(Customer.full_name.ilike(term) | Customer.national_id.ilike(term))
     customers = q.order_by(Customer.created_at.desc()).all()
 
-    # Batch-fetch miner registrations for enrichment
     reg_numbers = list({c.miner_reg_number for c in customers if c.miner_reg_number})
     miner_map: dict[str, MinerRegistration] = {}
     if reg_numbers:
-        for m in (
-            db.query(MinerRegistration)
-            .filter(MinerRegistration.reg_number.in_(reg_numbers))
-            .all()
-        ):
+        for m in db.query(MinerRegistration).filter(MinerRegistration.reg_number.in_(reg_numbers)).all():
             miner_map[m.reg_number] = m
 
     rows: list[CustomerAdminRow] = []
@@ -88,10 +145,13 @@ def list_customers_admin(
                 created_at=c.created_at,
                 updated_at=c.updated_at,
                 miner_reg_number=c.miner_reg_number,
+                customer_number=c.customer_number,
                 full_name=c.full_name,
                 national_id=c.national_id,
                 date_of_birth=c.date_of_birth,
                 nationality=c.nationality,
+                district=c.district,
+                id_document_type=c.id_document_type,
                 phone_number=c.phone_number,
                 email=c.email,
                 physical_address=c.physical_address,
@@ -99,12 +159,26 @@ def list_customers_admin(
                 employer=c.employer,
                 place_of_work=c.place_of_work,
                 source_of_funds=c.source_of_funds,
+                source_of_wealth=c.source_of_wealth,
+                has_payslip=c.has_payslip,
+                payslip_ref=c.payslip_ref,
                 purpose_of_purchase=c.purpose_of_purchase,
                 transaction_frequency=c.transaction_frequency,
+                proof_of_residence_ref=c.proof_of_residence_ref,
+                financial_statements_ref=c.financial_statements_ref,
                 politically_exposed=c.politically_exposed,
                 pep_details=c.pep_details,
+                pep_position=c.pep_position,
+                pep_organization=c.pep_organization,
+                pep_since=c.pep_since,
+                pep_relationship=c.pep_relationship,
+                pep_source_of_wealth_explained=c.pep_source_of_wealth_explained,
                 known_sanctions=c.known_sanctions,
                 sanctions_details=c.sanctions_details,
+                is_minor=c.is_minor,
+                guardian_full_name=c.guardian_full_name,
+                guardian_national_id=c.guardian_national_id,
+                guardian_phone=c.guardian_phone,
                 risk_level=c.risk_level,
                 is_flagged=c.is_flagged,
                 flag_reason=c.flag_reason,
@@ -181,9 +255,7 @@ def get_customer_profile(
         largest_transaction_usd=float(txn_max or 0.0),
         last_90d_transaction_count=int(recent_count or 0),
         last_90d_spend_usd=float(recent_total or 0.0),
-        transactions=[
-            CustomerProfileTransactionOut.model_validate(txn) for txn in transactions
-        ],
+        transactions=[CustomerProfileTransactionOut.model_validate(txn) for txn in transactions],
     )
 
 
@@ -192,12 +264,27 @@ def create_customer(
     payload: CustomerCreate,
     db: Session = Depends(get_db),
 ) -> Customer:
-    """Create a new customer for a miner. Auto-flags PEP customers."""
-    risk_level, is_flagged, flag_reason = _assess_risk(
-        payload.politically_exposed, payload.known_sanctions
+    existing = (
+        db.query(Customer)
+        .filter(Customer.national_id == payload.national_id)
+        .order_by(Customer.created_at.desc())
+        .first()
     )
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Customer already exists for this national ID "
+                f"(Customer #{existing.customer_number or existing.id}). "
+                f"Use the existing customer record instead of creating a duplicate."
+            ),
+        )
+
+    _validate_customer_compliance(payload)
+    risk_level, is_flagged, flag_reason = _assess_risk(payload)
     customer = Customer(
         **payload.model_dump(),
+        customer_number=_next_customer_number(db),
         risk_level=risk_level,
         is_flagged=is_flagged,
         flag_reason=flag_reason,
@@ -209,6 +296,35 @@ def create_customer(
     return customer
 
 
+@router.post("/{customer_id}/str", status_code=201)
+def submit_str(
+    customer_id: int,
+    payload: dict | None = None,
+    db: Session = Depends(get_db),
+) -> dict[str, str]:
+    customer = db.get(Customer, customer_id)
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    reason = (payload or {}).get("reason") or customer.flag_reason or "Suspicious activity observed"
+    note = (payload or {}).get("note")
+    str_ref = f"STR-{dt_date.today().strftime('%Y%m%d')}-{customer_id:06d}"
+    detail = f"{str_ref} filed for customer {customer.customer_number or customer.national_id}: {reason}"
+    if note:
+        detail += f" | Note: {note}"
+
+    log_event(
+        db,
+        action="str_submitted",
+        entity_type="customer",
+        entity_ref=str(customer_id),
+        detail=detail,
+        actor=customer.miner_reg_number or "system",
+    )
+    db.commit()
+    return {"str_reference": str_ref, "status": "submitted"}
+
+
 @router.get("", response_model=list[CustomerOut])
 def list_customers(
     miner_reg_number: str | None = None,
@@ -217,7 +333,6 @@ def list_customers(
     search: str | None = None,
     db: Session = Depends(get_db),
 ) -> list[Customer]:
-    """List customers. Pass miner_reg_number to scope to a single miner."""
     q = db.query(Customer)
     if miner_reg_number:
         q = q.filter(Customer.miner_reg_number == miner_reg_number)
@@ -227,9 +342,7 @@ def list_customers(
         q = q.filter(Customer.is_flagged.is_(is_flagged))
     if search:
         term = f"%{search}%"
-        q = q.filter(
-            Customer.full_name.ilike(term) | Customer.national_id.ilike(term)
-        )
+        q = q.filter(Customer.full_name.ilike(term) | Customer.national_id.ilike(term))
     return q.order_by(Customer.created_at.desc()).all()
 
 
@@ -247,7 +360,6 @@ def update_customer(
     payload: CustomerUpdate,
     db: Session = Depends(get_db),
 ) -> Customer:
-    """Update customer details. Re-runs risk assessment if PEP status changes."""
     customer = db.get(Customer, customer_id)
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
@@ -256,15 +368,11 @@ def update_customer(
     for field, value in data.items():
         setattr(customer, field, value)
 
-    # Re-run risk assessment when PEP status was updated
-    if "politically_exposed" in data or "known_sanctions" in data:
-        risk_level, is_flagged, flag_reason = _assess_risk(
-            customer.politically_exposed, customer.known_sanctions
-        )
-        customer.risk_level = risk_level
-        if is_flagged and not customer.is_flagged:
-            customer.is_flagged = True
-            customer.flag_reason = flag_reason
+    _validate_customer_compliance(customer)
+    risk_level, is_flagged, flag_reason = _assess_risk(customer)
+    customer.risk_level = risk_level
+    customer.is_flagged = is_flagged
+    customer.flag_reason = flag_reason
 
     db.commit()
     db.refresh(customer)

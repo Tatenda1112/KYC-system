@@ -81,6 +81,9 @@ export default function AddCustomerPage() {
   const [nationalId, setNationalId] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [nationality, setNationality] = useState('');
+  const [district, setDistrict] = useState('');
+  const [districtOther, setDistrictOther] = useState('');
+  const [idDocumentType, setIdDocumentType] = useState('');
 
   // ── Contact
   const [phone, setPhone] = useState('');
@@ -91,27 +94,36 @@ export default function AddCustomerPage() {
   const [occupation, setOccupation] = useState('');
   const [employer, setEmployer] = useState('');
   const [sourceOfFunds, setSourceOfFunds] = useState('');
+  const [sourceOfWealth, setSourceOfWealth] = useState('');
+  const [hasPayslip, setHasPayslip] = useState(false);
+  const [payslipRef, setPayslipRef] = useState('');
   const [purposeOfPurchase, setPurposeOfPurchase] = useState('');
   const [transactionFrequency, setTransactionFrequency] = useState('');
+  const [proofOfResidenceRef, setProofOfResidenceRef] = useState('');
+  const [financialStatementsRef, setFinancialStatementsRef] = useState('');
 
   // ── Risk
   const [politicallyExposed, setPoliticallyExposed] = useState(false);
   const [pepDetails, setPepDetails] = useState('');
+  const [pepPosition, setPepPosition] = useState('');
+  const [pepOrganization, setPepOrganization] = useState('');
+  const [pepSince, setPepSince] = useState('');
+  const [pepRelationship, setPepRelationship] = useState('');
+  const [pepSourceOfWealthExplained, setPepSourceOfWealthExplained] = useState(false);
   const [knownSanctions, setKnownSanctions] = useState(false);
   const [sanctionsDetails, setSanctionsDetails] = useState('');
+  const [isMinor, setIsMinor] = useState(false);
+  const [guardianFullName, setGuardianFullName] = useState('');
+  const [guardianNationalId, setGuardianNationalId] = useState('');
+  const [guardianPhone, setGuardianPhone] = useState('');
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
 
-  // CDD ref for display (form instance identifier)
-  const [cddRef] = useState(() => {
-    const ts = Date.now();
-    return `CDD-${ts.toString().slice(-8)}`;
-  });
-  const today = new Date().toLocaleDateString('en-GB', {
-    day: '2-digit', month: 'short', year: 'numeric',
-  });
+  // Hydration-safe display values (set after mount on client)
+  const [cddRef, setCddRef] = useState('CDD-........');
+  const [today, setToday] = useState('-- --- ----');
 
   useEffect(() => {
     const reg = localStorage.getItem('minerRegNumber');
@@ -146,6 +158,18 @@ export default function AddCustomerPage() {
     }
   }, []);
 
+  useEffect(() => {
+    const ts = Date.now();
+    setCddRef(`CDD-${ts.toString().slice(-8)}`);
+    setToday(
+      new Date().toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      }),
+    );
+  }, []);
+
   const handleCheck = async () => {
     if (!checkInput.trim()) return;
     setCheckLoading(true);
@@ -176,8 +200,16 @@ export default function AddCustomerPage() {
     const e: FormErrors = {};
     if (!fullName.trim()) e.fullName = 'Required';
     if (!nationalId.trim()) e.nationalId = 'Required';
+    if (district === 'Other' && !districtOther.trim()) e.districtOther = 'Specify district';
     if (politicallyExposed && !pepDetails.trim()) e.pepDetails = 'Describe the PEP connection';
+    if (politicallyExposed && !pepPosition.trim()) e.pepPosition = 'PEP position is required';
+    if (politicallyExposed && !proofOfResidenceRef.trim()) e.proofOfResidenceRef = 'Required for PEP';
+    if (politicallyExposed && !financialStatementsRef.trim()) e.financialStatementsRef = 'Required for PEP';
+    if (politicallyExposed && !pepSourceOfWealthExplained) e.pepSourceOfWealthExplained = 'Confirm source of wealth';
     if (knownSanctions && !sanctionsDetails.trim()) e.sanctionsDetails = 'Describe the sanctions';
+    if (isMinor && !guardianFullName.trim()) e.guardianFullName = 'Guardian full name required';
+    if (isMinor && !guardianNationalId.trim()) e.guardianNationalId = 'Guardian ID required';
+    if (isMinor && !guardianPhone.trim()) e.guardianPhone = 'Guardian phone required';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -193,18 +225,34 @@ export default function AddCustomerPage() {
       national_id: nationalId.trim(),
       date_of_birth: dateOfBirth || null,
       nationality: nationality.trim() || null,
+      district: district === 'Other' ? (districtOther.trim() || null) : (district || null),
+      id_document_type: idDocumentType || null,
       phone_number: phone.trim() || null,
       email: email.trim() || null,
       physical_address: address.trim() || null,
       occupation: occupation.trim() || null,
       employer: employer.trim() || null,
       source_of_funds: sourceOfFunds || null,
+      source_of_wealth: sourceOfWealth.trim() || null,
+      has_payslip: hasPayslip,
+      payslip_ref: hasPayslip ? (payslipRef.trim() || null) : null,
       purpose_of_purchase: purposeOfPurchase || null,
       transaction_frequency: transactionFrequency || null,
+      proof_of_residence_ref: proofOfResidenceRef.trim() || null,
+      financial_statements_ref: financialStatementsRef.trim() || null,
       politically_exposed: politicallyExposed,
       pep_details: pepDetails.trim() || null,
+      pep_position: pepPosition.trim() || null,
+      pep_organization: pepOrganization.trim() || null,
+      pep_since: pepSince || null,
+      pep_relationship: pepRelationship || null,
+      pep_source_of_wealth_explained: pepSourceOfWealthExplained,
       known_sanctions: knownSanctions,
       sanctions_details: sanctionsDetails.trim() || null,
+      is_minor: isMinor,
+      guardian_full_name: guardianFullName.trim() || null,
+      guardian_national_id: guardianNationalId.trim() || null,
+      guardian_phone: guardianPhone.trim() || null,
     };
 
     try {
@@ -382,6 +430,48 @@ export default function AddCustomerPage() {
                       />
                     </div>
                   </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">District</label>
+                      <select
+                        value={district}
+                        onChange={e => setDistrict(e.target.value)}
+                        className={`${inputBase} border-gray-200`}
+                      >
+                        <option value="">Select district...</option>
+                        <option value="Kadoma">Kadoma</option>
+                        <option value="Ngezi">Ngezi</option>
+                        <option value="Shurugwi">Shurugwi</option>
+                        <option value="Zvishavane">Zvishavane</option>
+                        <option value="Gwanda">Gwanda</option>
+                        <option value="Other">Other</option>
+                      </select>
+                      {district === 'Other' && (
+                        <input
+                          type="text"
+                          value={districtOther}
+                          onChange={e => { setDistrictOther(e.target.value); if (errors.districtOther) setErrors(p => ({ ...p, districtOther: '' })); }}
+                          className={`${inputBase} border-gray-200 mt-2`}
+                          placeholder="Specify district"
+                        />
+                      )}
+                      {errors.districtOther && <div className="text-xs text-gray-500 mt-1">{errors.districtOther}</div>}
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">ID document type</label>
+                      <select
+                        value={idDocumentType}
+                        onChange={e => setIdDocumentType(e.target.value)}
+                        className={`${inputBase} border-gray-200`}
+                      >
+                        <option value="">Select ID type...</option>
+                        <option value="National ID">National ID</option>
+                        <option value="Passport">Passport</option>
+                        <option value="Driver License">Driver License</option>
+                        <option value="Other">Other Government ID</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -512,6 +602,59 @@ export default function AddCustomerPage() {
                       </div>
                     </div>
                   </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Source of wealth</label>
+                      <input
+                        type="text"
+                        value={sourceOfWealth}
+                        onChange={e => setSourceOfWealth(e.target.value)}
+                        className={`${inputBase} border-gray-200`}
+                        placeholder="e.g. Long-term business ownership"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Payslip available?</label>
+                      <div className="h-9 flex items-center">
+                        <YesNoToggle value={hasPayslip} onChange={setHasPayslip} />
+                      </div>
+                    </div>
+                  </div>
+                  {hasPayslip && (
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Payslip reference (optional)</label>
+                      <input
+                        type="text"
+                        value={payslipRef}
+                        onChange={e => setPayslipRef(e.target.value)}
+                        className={`${inputBase} border-gray-200`}
+                        placeholder="Payslip number or file reference"
+                      />
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Proof of residence ref</label>
+                      <input
+                        type="text"
+                        value={proofOfResidenceRef}
+                        onChange={e => { setProofOfResidenceRef(e.target.value); if (errors.proofOfResidenceRef) setErrors(p => ({ ...p, proofOfResidenceRef: '' })); }}
+                        className={`${inputBase} ${errors.proofOfResidenceRef ? 'border-gray-800' : 'border-gray-200'}`}
+                        placeholder="Document/reference number"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Financial statements ref</label>
+                      <input
+                        type="text"
+                        value={financialStatementsRef}
+                        onChange={e => { setFinancialStatementsRef(e.target.value); if (errors.financialStatementsRef) setErrors(p => ({ ...p, financialStatementsRef: '' })); }}
+                        className={`${inputBase} ${errors.financialStatementsRef ? 'border-gray-800' : 'border-gray-200'}`}
+                        placeholder="Statement file/reference number"
+                      />
+                      {errors.financialStatementsRef && <div className="text-xs text-gray-500 mt-1">{errors.financialStatementsRef}</div>}
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -535,7 +678,7 @@ export default function AddCustomerPage() {
                     <YesNoToggle value={politicallyExposed} onChange={setPoliticallyExposed} />
                   </div>
                   {politicallyExposed && (
-                    <div>
+                    <div className="space-y-3">
                       <label className="text-xs text-gray-500 mb-1 block">Describe their position</label>
                       <textarea
                         value={pepDetails}
@@ -544,6 +687,94 @@ export default function AddCustomerPage() {
                         placeholder="e.g. Member of Parliament for Harare West since 2018..."
                       />
                       {errors.pepDetails && <div className="text-xs text-gray-500 mt-1">{errors.pepDetails}</div>}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">PEP position/title</label>
+                          <input
+                            type="text"
+                            value={pepPosition}
+                            onChange={e => { setPepPosition(e.target.value); if (errors.pepPosition) setErrors(p => ({ ...p, pepPosition: '' })); }}
+                            className={`${inputBase} ${errors.pepPosition ? 'border-gray-800' : 'border-gray-200'}`}
+                            placeholder="e.g. Member of Parliament"
+                          />
+                          {errors.pepPosition && <div className="text-xs text-gray-500 mt-1">{errors.pepPosition}</div>}
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">PEP organization</label>
+                          <input
+                            type="text"
+                            value={pepOrganization}
+                            onChange={e => setPepOrganization(e.target.value)}
+                            className={`${inputBase} border-gray-200`}
+                            placeholder="e.g. Parliament of Zimbabwe"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">PEP since</label>
+                          <input
+                            type="date"
+                            value={pepSince}
+                            onChange={e => setPepSince(e.target.value)}
+                            className={`${inputBase} border-gray-200`}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block">Relationship</label>
+                          <select
+                            value={pepRelationship}
+                            onChange={e => setPepRelationship(e.target.value)}
+                            className={`${inputBase} border-gray-200`}
+                          >
+                            <option value="">Select relationship...</option>
+                            <option value="Self">Self</option>
+                            <option value="Family member">Family member</option>
+                            <option value="Close associate">Close associate</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between py-3 border border-gray-100 rounded-lg px-4">
+                        <div>
+                          <div className="text-sm text-gray-800 font-medium">Source of wealth confirmed?</div>
+                          <div className="text-xs text-gray-400 mt-0.5">
+                            Confirm supporting financial evidence has been reviewed
+                          </div>
+                        </div>
+                        <YesNoToggle value={pepSourceOfWealthExplained} onChange={setPepSourceOfWealthExplained} />
+                      </div>
+                      {errors.pepSourceOfWealthExplained && <div className="text-xs text-gray-500 mt-1">{errors.pepSourceOfWealthExplained}</div>}
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between py-3 border border-gray-100 rounded-lg px-4">
+                    <div>
+                      <div className="text-sm text-gray-800 font-medium">
+                        Is this customer a minor?
+                      </div>
+                      <div className="text-xs text-gray-400 mt-0.5">
+                        Minors require parent/guardian verification
+                      </div>
+                    </div>
+                    <YesNoToggle value={isMinor} onChange={setIsMinor} />
+                  </div>
+                  {isMinor && (
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="text-xs text-gray-500 mb-1 block">Guardian full name</label>
+                        <input type="text" value={guardianFullName} onChange={e => { setGuardianFullName(e.target.value); if (errors.guardianFullName) setErrors(p => ({ ...p, guardianFullName: '' })); }} className={`${inputBase} ${errors.guardianFullName ? 'border-gray-800' : 'border-gray-200'}`} />
+                        {errors.guardianFullName && <div className="text-xs text-gray-500 mt-1">{errors.guardianFullName}</div>}
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 mb-1 block">Guardian ID number</label>
+                        <input type="text" value={guardianNationalId} onChange={e => { setGuardianNationalId(e.target.value); if (errors.guardianNationalId) setErrors(p => ({ ...p, guardianNationalId: '' })); }} className={`${inputBase} ${errors.guardianNationalId ? 'border-gray-800' : 'border-gray-200'}`} />
+                        {errors.guardianNationalId && <div className="text-xs text-gray-500 mt-1">{errors.guardianNationalId}</div>}
+                      </div>
+                      <div>
+                        <label className="text-xs text-gray-500 mb-1 block">Guardian phone</label>
+                        <input type="text" value={guardianPhone} onChange={e => { setGuardianPhone(e.target.value); if (errors.guardianPhone) setErrors(p => ({ ...p, guardianPhone: '' })); }} className={`${inputBase} ${errors.guardianPhone ? 'border-gray-800' : 'border-gray-200'}`} />
+                        {errors.guardianPhone && <div className="text-xs text-gray-500 mt-1">{errors.guardianPhone}</div>}
+                      </div>
                     </div>
                   )}
 

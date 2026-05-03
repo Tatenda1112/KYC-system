@@ -10,6 +10,7 @@ interface FormData {
   fullName: string;
   nationalId: string;
   district: string;
+  districtOther?: string;
   yearsOfOperation: string;
   educationLevel: string;
   registrationType: string;
@@ -34,6 +35,7 @@ export default function MinerRegistrationStep1Page() {
     fullName: '',
     nationalId: '',
     district: '',
+    districtOther: '',
     yearsOfOperation: '',
     educationLevel: '',
     registrationType: '',
@@ -115,6 +117,7 @@ export default function MinerRegistrationStep1Page() {
     if (!formData.fullName.trim()) e.fullName = 'This field is required';
     if (!formData.nationalId.trim()) e.nationalId = 'This field is required';
     if (!formData.district) e.district = 'This field is required';
+    if (formData.district === 'Other' && !formData.districtOther?.trim()) e.districtOther = 'Please specify district';
     if (!formData.yearsOfOperation) e.yearsOfOperation = 'This field is required';
     if (!formData.educationLevel) e.educationLevel = 'This field is required';
     if (!formData.registrationType) e.registrationType = 'This field is required';
@@ -126,7 +129,11 @@ export default function MinerRegistrationStep1Page() {
 
   const handleNext = () => {
     if (!validate()) return;
-    sessionStorage.setItem('minerRegistrationStep1', JSON.stringify(formData));
+    const payload = {
+      ...formData,
+      district: formData.district === 'Other' ? formData.districtOther?.trim() || '' : formData.district,
+    };
+    sessionStorage.setItem('minerRegistrationStep1', JSON.stringify(payload));
     router.push('/miner/register/step2');
   };
 
@@ -262,9 +269,22 @@ export default function MinerRegistrationStep1Page() {
                     <option value="Shurugwi">Shurugwi</option>
                     <option value="Zvishavane">Zvishavane</option>
                     <option value="Gwanda">Gwanda</option>
+                    <option value="Other">Other</option>
                   </select>
+                  {formData.district === 'Other' && (
+                    <input
+                      type="text"
+                      value={formData.districtOther || ''}
+                      onChange={e => handleChange('districtOther' as keyof FormData, e.target.value)}
+                      className={`${inputBase} border-gray-200 mt-2`}
+                      placeholder="Specify district"
+                    />
+                  )}
                   {errors.district && (
                     <div className="text-xs text-gray-500 mt-1">{errors.district}</div>
+                  )}
+                  {errors.districtOther && (
+                    <div className="text-xs text-gray-500 mt-1">{errors.districtOther}</div>
                   )}
                 </div>
                 <div>

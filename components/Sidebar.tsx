@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 
 interface NavItem {
+  id?: string;
   label: string;
   href: string;
   locked?: boolean;
@@ -29,34 +30,34 @@ export default function Sidebar({ role, activePage, userName, kycStatus }: Sideb
     switch (role) {
       case 'admin':
         return [
-          { label: 'Dashboard', href: '/admin/dashboard' },
-          { label: 'Users', href: '/admin/users' },
-          { label: 'Miners', href: '/admin/miners' },
-          { label: 'Customers', href: '/admin/customers' },
-          { label: 'Transactions', href: '/admin/transactions' },
-          { label: 'Compliance', href: '/admin/compliance' },
-          { label: 'Reports', href: '/admin/reports' },
-          { label: 'Audit log', href: '/admin/audit' },
+          { id: 'dashboard', label: 'Dashboard', href: '/admin/dashboard' },
+          { id: 'users', label: 'Users', href: '/admin/users' },
+          { id: 'miners', label: 'Miners', href: '/admin/miners' },
+          { id: 'customers', label: 'Customers', href: '/admin/customers' },
+          { id: 'transactions', label: 'Transactions', href: '/admin/transactions' },
+          { id: 'compliance', label: 'Compliance', href: '/admin/compliance' },
+          { id: 'reports', label: 'Reports', href: '/admin/reports' },
+          { id: 'audit', label: 'Audit log', href: '/admin/audit' },
         ];
       case 'miner': {
         const kycLocked = !!kycStatus && kycStatus !== 'Verified';
         return [
-          { label: 'My dashboard', href: '/miner/dashboard' },
-          { label: 'Register KYC', href: '/miner/register' },
-          { label: 'My customers', href: '/miner/customers', locked: kycLocked },
-          { label: 'Record sale', href: '/miner/transactions/new', locked: kycLocked },
-          { label: 'My transactions', href: '/miner/transactions', locked: kycLocked },
-          { label: 'Download report', href: '/miner/reports', locked: kycLocked },
-          { label: 'Change password', href: '/change-password' },
+          { id: 'dashboard', label: 'Overview', href: '/miner/dashboard' },
+          { id: 'registerkyc', label: 'KYC Registration', href: '/miner/register' },
+          { id: 'mycustomers', label: 'Customer Registry', href: '/miner/customers', locked: kycLocked },
+          { id: 'recordsale', label: 'Record Transaction', href: '/miner/transactions/new', locked: kycLocked },
+          { id: 'mytransactions', label: 'Transaction History', href: '/miner/transactions', locked: kycLocked },
+          { id: 'reports', label: 'Compliance Reports', href: '/miner/reports', locked: kycLocked },
+          { id: 'changepassword', label: 'Security Settings', href: '/change-password' },
         ];
       }
       case 'compliance_officer':
         return [
-          { label: 'Dashboard', href: '/officer/dashboard' },
-          { label: 'My district', href: '/officer/district' },
-          { label: 'Compliance checks', href: '/officer/compliance' },
-          { label: 'Reports', href: '/officer/reports' },
-          { label: 'Change password', href: '/change-password' },
+          { id: 'dashboard', label: 'Dashboard', href: '/officer/dashboard' },
+          { id: 'mydistrict', label: 'My district', href: '/officer/district' },
+          { id: 'compliancechecks', label: 'Compliance checks', href: '/officer/compliance' },
+          { id: 'reports', label: 'Reports', href: '/officer/reports' },
+          { id: 'changepassword', label: 'Change password', href: '/change-password' },
         ];
       default:
         return [];
@@ -66,7 +67,7 @@ export default function Sidebar({ role, activePage, userName, kycStatus }: Sideb
   const getRoleLabel = () => {
     switch (role) {
       case 'admin': return 'Admin Panel';
-      case 'miner': return 'Miner Portal';
+      case 'miner': return 'Miner Operations Portal';
       case 'compliance_officer': return 'Officer Portal';
       default: return '';
     }
@@ -89,7 +90,7 @@ export default function Sidebar({ role, activePage, userName, kycStatus }: Sideb
       {/* Navigation Items */}
       <nav className="flex-1 py-4">
         {navItems.map((item) => {
-          const isActive = activePage === item.label.toLowerCase().replace(' ', '');
+          const isActive = activePage === (item.id ?? item.label.toLowerCase().replace(/\s+/g, ''));
           return (
             <a
               key={item.href}

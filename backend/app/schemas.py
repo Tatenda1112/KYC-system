@@ -263,6 +263,8 @@ class CustomerCreate(BaseModel):
     national_id: str = Field(..., min_length=3, max_length=80)
     date_of_birth: date | None = None
     nationality: str | None = Field(None, max_length=80)
+    district: str | None = Field(None, max_length=80)
+    id_document_type: str | None = Field(None, max_length=60)
     # Contact
     phone_number: str | None = Field(None, max_length=40)
     email: str | None = Field(None, max_length=255)
@@ -272,18 +274,35 @@ class CustomerCreate(BaseModel):
     employer: str | None = Field(None, max_length=200)
     place_of_work: str | None = Field(None, max_length=200)
     source_of_funds: str | None = Field(None, max_length=200)
+    source_of_wealth: str | None = Field(None, max_length=200)
+    has_payslip: bool = False
+    payslip_ref: str | None = Field(None, max_length=255)
     purpose_of_purchase: str | None = Field(None, max_length=200)
     transaction_frequency: str | None = Field(None, max_length=50)
+    proof_of_residence_ref: str | None = Field(None, max_length=255)
+    financial_statements_ref: str | None = Field(None, max_length=255)
     # Risk
     politically_exposed: bool = False
     pep_details: str | None = None
+    pep_position: str | None = Field(None, max_length=200)
+    pep_organization: str | None = Field(None, max_length=200)
+    pep_since: date | None = None
+    pep_relationship: str | None = Field(None, max_length=120)
+    pep_source_of_wealth_explained: bool = False
     known_sanctions: bool = False
     sanctions_details: str | None = None
+    is_minor: bool = False
+    guardian_full_name: str | None = Field(None, max_length=200)
+    guardian_national_id: str | None = Field(None, max_length=80)
+    guardian_phone: str | None = Field(None, max_length=40)
 
     @field_validator(
-        "nationality", "phone_number", "email", "physical_address", "occupation",
-        "employer", "place_of_work", "source_of_funds", "purpose_of_purchase",
-        "transaction_frequency", "pep_details", "sanctions_details",
+        "nationality", "district", "id_document_type", "phone_number", "email",
+        "physical_address", "occupation", "employer", "place_of_work",
+        "source_of_funds", "source_of_wealth", "payslip_ref", "purpose_of_purchase",
+        "transaction_frequency", "proof_of_residence_ref", "financial_statements_ref",
+        "pep_details", "pep_position", "pep_organization", "pep_relationship",
+        "guardian_full_name", "guardian_national_id", "guardian_phone", "sanctions_details",
         mode="before",
     )
     @classmethod
@@ -300,11 +319,14 @@ class CustomerOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     miner_reg_number: str | None
+    customer_number: str | None
     # Identity
     full_name: str
     national_id: str
     date_of_birth: date | None
     nationality: str | None
+    district: str | None
+    id_document_type: str | None
     # Contact
     phone_number: str | None
     email: str | None
@@ -314,13 +336,27 @@ class CustomerOut(BaseModel):
     employer: str | None
     place_of_work: str | None
     source_of_funds: str | None
+    source_of_wealth: str | None
+    has_payslip: bool
+    payslip_ref: str | None
     purpose_of_purchase: str | None
     transaction_frequency: str | None
+    proof_of_residence_ref: str | None
+    financial_statements_ref: str | None
     # Risk
     politically_exposed: bool
     pep_details: str | None
+    pep_position: str | None
+    pep_organization: str | None
+    pep_since: date | None
+    pep_relationship: str | None
+    pep_source_of_wealth_explained: bool
     known_sanctions: bool
     sanctions_details: str | None
+    is_minor: bool
+    guardian_full_name: str | None
+    guardian_national_id: str | None
+    guardian_phone: str | None
     risk_level: str
     is_flagged: bool
     flag_reason: str | None
@@ -334,6 +370,8 @@ class CustomerUpdate(BaseModel):
     full_name: str | None = Field(None, min_length=2, max_length=200)
     date_of_birth: date | None = None
     nationality: str | None = Field(None, max_length=80)
+    district: str | None = Field(None, max_length=80)
+    id_document_type: str | None = Field(None, max_length=60)
     phone_number: str | None = Field(None, max_length=40)
     email: str | None = Field(None, max_length=255)
     physical_address: str | None = None
@@ -341,17 +379,34 @@ class CustomerUpdate(BaseModel):
     employer: str | None = Field(None, max_length=200)
     place_of_work: str | None = Field(None, max_length=200)
     source_of_funds: str | None = Field(None, max_length=200)
+    source_of_wealth: str | None = Field(None, max_length=200)
+    has_payslip: bool | None = None
+    payslip_ref: str | None = Field(None, max_length=255)
     purpose_of_purchase: str | None = Field(None, max_length=200)
     transaction_frequency: str | None = Field(None, max_length=50)
+    proof_of_residence_ref: str | None = Field(None, max_length=255)
+    financial_statements_ref: str | None = Field(None, max_length=255)
     politically_exposed: bool | None = None
     pep_details: str | None = None
+    pep_position: str | None = Field(None, max_length=200)
+    pep_organization: str | None = Field(None, max_length=200)
+    pep_since: date | None = None
+    pep_relationship: str | None = Field(None, max_length=120)
+    pep_source_of_wealth_explained: bool | None = None
     known_sanctions: bool | None = None
     sanctions_details: str | None = None
+    is_minor: bool | None = None
+    guardian_full_name: str | None = Field(None, max_length=200)
+    guardian_national_id: str | None = Field(None, max_length=80)
+    guardian_phone: str | None = Field(None, max_length=40)
 
     @field_validator(
-        "nationality", "phone_number", "email", "physical_address", "occupation",
-        "employer", "place_of_work", "source_of_funds", "purpose_of_purchase",
-        "transaction_frequency", "pep_details", "sanctions_details",
+        "nationality", "district", "id_document_type", "phone_number", "email",
+        "physical_address", "occupation", "employer", "place_of_work",
+        "source_of_funds", "source_of_wealth", "payslip_ref", "purpose_of_purchase",
+        "transaction_frequency", "proof_of_residence_ref", "financial_statements_ref",
+        "pep_details", "pep_position", "pep_organization", "pep_relationship",
+        "guardian_full_name", "guardian_national_id", "guardian_phone", "sanctions_details",
         mode="before",
     )
     @classmethod
@@ -368,11 +423,14 @@ class CustomerAdminRow(BaseModel):
     created_at: datetime
     updated_at: datetime
     miner_reg_number: str | None
+    customer_number: str | None
     # Identity
     full_name: str
     national_id: str
     date_of_birth: date | None
     nationality: str | None
+    district: str | None
+    id_document_type: str | None
     # Contact
     phone_number: str | None
     email: str | None
@@ -382,13 +440,27 @@ class CustomerAdminRow(BaseModel):
     employer: str | None
     place_of_work: str | None
     source_of_funds: str | None
+    source_of_wealth: str | None
+    has_payslip: bool
+    payslip_ref: str | None
     purpose_of_purchase: str | None
     transaction_frequency: str | None
+    proof_of_residence_ref: str | None
+    financial_statements_ref: str | None
     # Risk
     politically_exposed: bool
     pep_details: str | None
+    pep_position: str | None
+    pep_organization: str | None
+    pep_since: date | None
+    pep_relationship: str | None
+    pep_source_of_wealth_explained: bool
     known_sanctions: bool
     sanctions_details: str | None
+    is_minor: bool
+    guardian_full_name: str | None
+    guardian_national_id: str | None
+    guardian_phone: str | None
     risk_level: str
     is_flagged: bool
     flag_reason: str | None

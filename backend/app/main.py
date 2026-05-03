@@ -37,10 +37,26 @@ def run_startup_migrations() -> None:
         existing_customer_columns = {
             column["name"] for column in inspector.get_columns("customers")
         }
+        if "customer_number" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN customer_number VARCHAR(60)")
+        if "district" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN district VARCHAR(80)")
+        if "id_document_type" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN id_document_type VARCHAR(60)")
         if "employer" not in existing_customer_columns:
             statements.append("ALTER TABLE customers ADD COLUMN employer VARCHAR(200)")
         if "place_of_work" not in existing_customer_columns:
             statements.append("ALTER TABLE customers ADD COLUMN place_of_work VARCHAR(200)")
+        if "source_of_wealth" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN source_of_wealth VARCHAR(200)")
+        if "has_payslip" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN has_payslip BOOLEAN DEFAULT 0")
+        if "payslip_ref" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN payslip_ref VARCHAR(255)")
+        if "proof_of_residence_ref" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN proof_of_residence_ref VARCHAR(255)")
+        if "financial_statements_ref" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN financial_statements_ref VARCHAR(255)")
         if "date_of_birth" not in existing_customer_columns:
             statements.append("ALTER TABLE customers ADD COLUMN date_of_birth DATE")
         if "nationality" not in existing_customer_columns:
@@ -53,6 +69,24 @@ def run_startup_migrations() -> None:
             )
         if "sanctions_details" not in existing_customer_columns:
             statements.append("ALTER TABLE customers ADD COLUMN sanctions_details TEXT")
+        if "pep_position" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN pep_position VARCHAR(200)")
+        if "pep_organization" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN pep_organization VARCHAR(200)")
+        if "pep_since" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN pep_since DATE")
+        if "pep_relationship" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN pep_relationship VARCHAR(120)")
+        if "pep_source_of_wealth_explained" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN pep_source_of_wealth_explained BOOLEAN DEFAULT 0")
+        if "is_minor" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN is_minor BOOLEAN DEFAULT 0")
+        if "guardian_full_name" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN guardian_full_name VARCHAR(200)")
+        if "guardian_national_id" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN guardian_national_id VARCHAR(80)")
+        if "guardian_phone" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN guardian_phone VARCHAR(40)")
 
     if "gold_transactions" in tables:
         existing_txn_columns = {

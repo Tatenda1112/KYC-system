@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -15,6 +15,18 @@ def create_registration(
     db: Session = Depends(get_db),
     current: User = Depends(get_current_user),
 ):
+    existing = (
+        db.query(KycRegistration)
+        .filter(KycRegistration.national_id_passport == payload.national_id_passport)
+        .order_by(KycRegistration.created_at.desc())
+        .first()
+    )
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail="KYC registration already exists for this national ID/passport.",
+        )
+
     row = KycRegistration(
         created_by_user_id=current.id,
         **payload.model_dump(),

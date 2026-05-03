@@ -53,6 +53,7 @@ export default function RecordGoldSalePage() {
   const [submitError, setSubmitError] = useState('');
   const [minerKycStatus, setMinerKycStatus] = useState('');
   const [minerRegNumber, setMinerRegNumber] = useState<string | null>(null);
+  const [complianceScore, setComplianceScore] = useState<number | null>(null);
 
   // Customer selection
   const [selectedCustomer, setSelectedCustomer] = useState<SelectedCustomer | null>(null);
@@ -79,6 +80,10 @@ export default function RecordGoldSalePage() {
           if (user?.miner_reg_number) {
             setMinerRegNumber(user.miner_reg_number);
             localStorage.setItem('minerRegNumber', user.miner_reg_number);
+            fetch(`/api/miner/dashboard?reg_number=${encodeURIComponent(user.miner_reg_number)}`, { cache: 'no-store' })
+              .then(r => (r.ok ? r.json() : null))
+              .then(d => setComplianceScore(typeof d?.compliance?.score === 'number' ? d.compliance.score : null))
+              .catch(() => {});
           }
           if (user?.full_name) {
             localStorage.setItem('minerName', user.full_name);
@@ -610,7 +615,7 @@ export default function RecordGoldSalePage() {
 
                 {/* Static: compliance score */}
                 <NoteCard title="Your compliance score">
-                  Current: 54/100 · Medium risk
+                  Current: {complianceScore ?? '--'}/100
                   <br />
                   Completing CDD on every transaction improves your score over time.
                 </NoteCard>

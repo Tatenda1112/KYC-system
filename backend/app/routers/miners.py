@@ -95,6 +95,22 @@ def register_miner(
         declaration_confirmed=declaration_confirmed,
     )
 
+    existing_by_national_id = (
+        db.query(MinerRegistration)
+        .filter(MinerRegistration.national_id == payload.national_id)
+        .order_by(MinerRegistration.created_at.desc())
+        .first()
+    )
+    if existing_by_national_id:
+        raise HTTPException(
+            status_code=409,
+            detail=(
+                f"Miner registration already exists for this national ID "
+                f"({existing_by_national_id.reg_number}). "
+                "Use the existing registration instead of creating a duplicate."
+            ),
+        )
+
     normalized_account_email = payload.account_email.strip().lower() if payload.account_email else None
     existing_registration = None
     if normalized_account_email:

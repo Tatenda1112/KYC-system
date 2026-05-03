@@ -11,4 +11,12 @@
 body {
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   font-variant-numeric: tabular-nums;
+  color: #0f172a;
+  font-weight: 450;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 600;
+  color: #020617;
 }

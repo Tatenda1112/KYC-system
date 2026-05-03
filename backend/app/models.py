@@ -202,6 +202,7 @@ class Customer(Base):
 
     # Linked miner (by KYC reg number, consistent with GoldTransaction pattern)
     miner_reg_number: Mapped[str | None] = mapped_column(String(60), nullable=True, index=True)
+    customer_number: Mapped[str | None] = mapped_column(String(60), nullable=True, unique=True, index=True)
 
     # Identity
     full_name: Mapped[str] = mapped_column(String(200))
@@ -212,17 +213,35 @@ class Customer(Base):
     # Identity
     date_of_birth: Mapped[date | None] = mapped_column(Date, nullable=True)
     nationality: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    district: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    id_document_type: Mapped[str | None] = mapped_column(String(60), nullable=True)
 
     occupation: Mapped[str | None] = mapped_column(String(120), nullable=True)
     employer: Mapped[str | None] = mapped_column(String(200), nullable=True)
     place_of_work: Mapped[str | None] = mapped_column(String(200), nullable=True)
     source_of_funds: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    source_of_wealth: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    has_payslip: Mapped[bool] = mapped_column(Boolean, default=False)
+    payslip_ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
     purpose_of_purchase: Mapped[str | None] = mapped_column(String(200), nullable=True)
     transaction_frequency: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    proof_of_residence_ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    financial_statements_ref: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # PEP
     politically_exposed: Mapped[bool] = mapped_column(Boolean, default=False)
     pep_details: Mapped[str | None] = mapped_column(Text, nullable=True)
+    pep_position: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    pep_organization: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    pep_since: Mapped[date | None] = mapped_column(Date, nullable=True)
+    pep_relationship: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    pep_source_of_wealth_explained: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Minor handling
+    is_minor: Mapped[bool] = mapped_column(Boolean, default=False)
+    guardian_full_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    guardian_national_id: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    guardian_phone: Mapped[str | None] = mapped_column(String(40), nullable=True)
 
     # Sanctions
     known_sanctions: Mapped[bool] = mapped_column(Boolean, default=False)

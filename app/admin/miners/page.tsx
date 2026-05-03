@@ -126,10 +126,10 @@ export default function MinersListPage() {
 
   const getRiskStyle = (risk: string) => {
     switch (risk.toLowerCase()) {
-      case 'high':   return 'text-gray-900 font-medium text-xs';
-      case 'medium': return 'text-gray-500 text-xs';
-      case 'low':    return 'text-gray-300 text-xs';
-      default:       return 'text-gray-400 text-xs';
+      case 'high':   return 'text-red-700 font-semibold text-xs';
+      case 'medium': return 'text-amber-700 font-semibold text-xs';
+      case 'low':    return 'text-emerald-700 font-semibold text-xs';
+      default:       return 'text-slate-500 font-medium text-xs';
     }
   };
 
@@ -138,11 +138,11 @@ export default function MinersListPage() {
 
   const getStatusBadgeStyle = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'verified':  return 'bg-gray-900 text-white';
-      case 'pending':   return 'bg-gray-100 text-gray-600';
-      case 'flagged':   return 'bg-gray-900 text-white';
-      case 'rejected':  return 'bg-gray-200 text-gray-500';
-      default:          return 'bg-gray-100 text-gray-600';
+      case 'verified':  return 'bg-emerald-100 text-emerald-800 border border-emerald-300';
+      case 'pending':   return 'bg-amber-100 text-amber-800 border border-amber-300';
+      case 'flagged':   return 'bg-red-100 text-red-800 border border-red-300';
+      case 'rejected':  return 'bg-rose-100 text-rose-800 border border-rose-300';
+      default:          return 'bg-slate-100 text-slate-700 border border-slate-300';
     }
   };
 
@@ -152,10 +152,10 @@ export default function MinersListPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* TOPBAR */}
-        <div className="h-12 bg-white border-b border-gray-100 flex items-center justify-between px-5">
+        <div className="h-12 bg-white border-b border-slate-200 flex items-center justify-between px-5">
           <div className="flex items-center gap-2">
-            <div className="text-sm font-medium text-gray-800">Registered miners</div>
-            <div className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+            <div className="text-sm font-semibold text-slate-900">Registered miners</div>
+            <div className="text-xs text-blue-800 bg-blue-100 px-2 py-0.5 rounded-full font-semibold">
               {loading ? '…' : `${miners.length} total`}
             </div>
           </div>
@@ -172,7 +172,7 @@ export default function MinersListPage() {
           <select
             value={filters.district}
             onChange={e => handleFilterChange('district', e.target.value)}
-            className="h-8 text-xs border border-gray-200 rounded bg-white px-2 text-gray-600"
+            className="h-8 text-xs border border-slate-300 rounded bg-white px-2 text-slate-700"
           >
             <option value="all">All districts</option>
             <option value="Kadoma">Kadoma</option>
@@ -185,7 +185,7 @@ export default function MinersListPage() {
           <select
             value={filters.kycStatus}
             onChange={e => handleFilterChange('kycStatus', e.target.value)}
-            className="h-8 text-xs border border-gray-200 rounded bg-white px-2 text-gray-600"
+            className="h-8 text-xs border border-slate-300 rounded bg-white px-2 text-slate-700"
           >
             <option value="all">All status</option>
             <option value="verified">Verified</option>
@@ -197,7 +197,7 @@ export default function MinersListPage() {
           <select
             value={filters.regType}
             onChange={e => handleFilterChange('regType', e.target.value)}
-            className="h-8 text-xs border border-gray-200 rounded bg-white px-2 text-gray-600"
+            className="h-8 text-xs border border-slate-300 rounded bg-white px-2 text-slate-700"
           >
             <option value="all">All types</option>
             <option value="Cooperative">Cooperative</option>
@@ -211,7 +211,7 @@ export default function MinersListPage() {
             placeholder="Search by name or reg number..."
             value={filters.search}
             onChange={e => handleFilterChange('search', e.target.value)}
-            className="flex-1 h-8 border border-gray-200 rounded bg-white px-3 text-xs text-gray-600 focus:outline-none focus:border-gray-800"
+            className="flex-1 h-8 border border-slate-300 rounded bg-white px-3 text-xs text-slate-700 focus:outline-none focus:border-blue-600"
           />
         </div>
 
@@ -244,16 +244,16 @@ export default function MinersListPage() {
         <div className="flex-1 overflow-auto">
           <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mx-5 mt-4">
             <table className="w-full table-fixed border-collapse">
-              <thead className="bg-gray-50">
+              <thead className="bg-slate-100">
                 <tr>
-                  <th className="text-xs text-gray-400 uppercase tracking-wider font-medium py-2.5 px-3 text-left w-[15%]">Reg number</th>
-                  <th className="text-xs text-gray-400 uppercase tracking-wider font-medium py-2.5 px-3 text-left w-[18%]">Full name</th>
-                  <th className="text-xs text-gray-400 uppercase tracking-wider font-medium py-2.5 px-3 text-left w-[11%]">District</th>
-                  <th className="text-xs text-gray-400 uppercase tracking-wider font-medium py-2.5 px-3 text-left w-[13%]">Type</th>
-                  <th className="text-xs text-gray-400 uppercase tracking-wider font-medium py-2.5 px-3 text-left w-[11%]">KYC status</th>
-                  <th className="text-xs text-gray-400 uppercase tracking-wider font-medium py-2.5 px-3 text-left w-[8%]">Score</th>
-                  <th className="text-xs text-gray-400 uppercase tracking-wider font-medium py-2.5 px-3 text-left w-[9%]">Risk</th>
-                  <th className="text-xs text-gray-400 uppercase tracking-wider font-medium py-2.5 px-3 text-left w-[15%]">Action</th>
+                  <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[15%]">Reg number</th>
+                  <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[18%]">Full name</th>
+                  <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[11%]">District</th>
+                  <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[13%]">Type</th>
+                  <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[11%]">KYC status</th>
+                  <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[8%]">Score</th>
+                  <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[9%]">Risk</th>
+                  <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[15%]">Action</th>
                 </tr>
               </thead>
               <tbody>
