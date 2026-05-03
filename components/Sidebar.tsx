@@ -36,19 +36,20 @@ export default function Sidebar({ role, activePage, userName, kycStatus }: Sideb
           { id: 'customers', label: 'Customers', href: '/admin/customers' },
           { id: 'transactions', label: 'Transactions', href: '/admin/transactions' },
           { id: 'compliance', label: 'Compliance', href: '/admin/compliance' },
+          { id: 'str', label: 'STR Center', href: '/admin/str' },
           { id: 'reports', label: 'Reports', href: '/admin/reports' },
           { id: 'audit', label: 'Audit log', href: '/admin/audit' },
         ];
       case 'miner': {
         const kycLocked = !!kycStatus && kycStatus !== 'Verified';
         return [
-          { id: 'dashboard', label: 'Overview', href: '/miner/dashboard' },
-          { id: 'registerkyc', label: 'KYC Registration', href: '/miner/register' },
-          { id: 'mycustomers', label: 'Customer Registry', href: '/miner/customers', locked: kycLocked },
-          { id: 'recordsale', label: 'Record Transaction', href: '/miner/transactions/new', locked: kycLocked },
-          { id: 'mytransactions', label: 'Transaction History', href: '/miner/transactions', locked: kycLocked },
-          { id: 'reports', label: 'Compliance Reports', href: '/miner/reports', locked: kycLocked },
-          { id: 'changepassword', label: 'Security Settings', href: '/change-password' },
+          { id: 'dashboard', label: 'Dashboard', href: '/miner/dashboard' },
+          { id: 'registerkyc', label: 'KYC Profile', href: '/miner/register' },
+          { id: 'mycustomers', label: 'Customers', href: '/miner/customers', locked: kycLocked },
+          { id: 'recordsale', label: 'New Sale', href: '/miner/transactions/new', locked: kycLocked },
+          { id: 'mytransactions', label: 'Sales History', href: '/miner/transactions', locked: kycLocked },
+          { id: 'reports', label: 'Reports', href: '/miner/reports', locked: kycLocked },
+          { id: 'changepassword', label: 'Account Security', href: '/change-password' },
         ];
       }
       case 'compliance_officer':
@@ -67,7 +68,7 @@ export default function Sidebar({ role, activePage, userName, kycStatus }: Sideb
   const getRoleLabel = () => {
     switch (role) {
       case 'admin': return 'Admin Panel';
-      case 'miner': return 'Miner Operations Portal';
+      case 'miner': return 'Miner Workspace';
       case 'compliance_officer': return 'Officer Portal';
       default: return '';
     }

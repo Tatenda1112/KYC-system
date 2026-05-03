@@ -505,6 +505,30 @@ class CustomerProfileOut(BaseModel):
     transactions: list[CustomerProfileTransactionOut]
 
 
+class StrReportOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    reference: str
+    customer_id: int
+    customer_number: str | None
+    customer_name: str
+    customer_national_id: str
+    reason: str
+    note: str | None
+    status: str
+    filed_by: str
+    reviewed_by: str | None
+    reviewed_at: datetime | None
+
+
+class StrReportStatusUpdate(BaseModel):
+    status: Literal["Submitted", "Under Review", "Escalated", "Closed"]
+    reviewed_by: str | None = Field(None, max_length=120)
+
+
 # ── Gold Sale Transactions ─────────────────────────────────────────────────────
 
 class GoldTransactionCreate(BaseModel):

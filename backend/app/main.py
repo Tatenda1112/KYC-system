@@ -103,6 +103,17 @@ def run_startup_migrations() -> None:
         if "customer_id_number" not in existing_txn_columns:
             statements.append("ALTER TABLE gold_transactions ADD COLUMN customer_id_number VARCHAR(80)")
 
+    if "str_reports" in tables:
+        existing_str_columns = {
+            column["name"] for column in inspector.get_columns("str_reports")
+        }
+        if "updated_at" not in existing_str_columns:
+            statements.append("ALTER TABLE str_reports ADD COLUMN updated_at DATETIME")
+        if "reviewed_by" not in existing_str_columns:
+            statements.append("ALTER TABLE str_reports ADD COLUMN reviewed_by VARCHAR(120)")
+        if "reviewed_at" not in existing_str_columns:
+            statements.append("ALTER TABLE str_reports ADD COLUMN reviewed_at DATETIME")
+
     if not statements:
         return
 

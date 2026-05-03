@@ -1,11 +1,11 @@
-from datetime import date as dt_date, timedelta
+from datetime import date as dt_date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func as sqlfunc
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import Customer, GoldTransaction, MinerRegistration
+from app.models import Customer, GoldTransaction, MinerRegistration, SuspiciousTransactionReport
 from app.audit_utils import log_event
 from app.schemas import (
     CustomerAdminRow,
@@ -14,6 +14,8 @@ from app.schemas import (
     CustomerProfileOut,
     CustomerProfileTransactionOut,
     CustomerUpdate,
+    StrReportOut,
+    StrReportStatusUpdate,
 )
 
 router = APIRouter(prefix="/customers", tags=["customers"])
@@ -62,6 +64,25 @@ def _next_customer_number(db: Session) -> str:
     else:
         seq = 1
     return f"{prefix}{seq:05d}"
+
+
+def _next_str_reference(db: Session) -> str:
+    year = dt_date.today().year
+    prefix = f"STR-{year}-"
+    latest = (
+        db.query(SuspiciousTransactionReport.reference)
+        .filter(SuspiciousTransactionReport.reference.like(f"{prefix}%"))
+        .order_by(SuspiciousTransactionReport.reference.desc())
+        .first()
+    )
+    if latest and latest[0]:
+        try:
+            seq = int(latest[0].split("-")[-1]) + 1
+        except ValueError:
+            seq = 1
+    else:
+        seq = 1
+    return f"{prefix}{seq:06d}"
 
 
 def _validate_customer_compliance(payload: CustomerCreate | CustomerUpdate | Customer) -> None:
@@ -193,6 +214,43 @@ def list_customers_admin(
     return rows
 
 
+@router.get("/str/reports", response_model=list[StrReportOut])
+def list_str_reports(
+    status: str | None = None,
+    search: str | None = None,
+    db: Session = Depends(get_db),
+) -> list[SuspiciousTransactionReport]:
+    q = db.query(SuspiciousTransactionReport)
+    if status:
+        q = q.filter(SuspiciousTransactionReport.status == status)
+    if search:
+        term = f"%{search}%"
+        q = q.filter(
+            SuspiciousTransactionReport.reference.ilike(term)
+            | SuspiciousTransactionReport.customer_name.ilike(term)
+            | SuspiciousTransactionReport.customer_national_id.ilike(term)
+        )
+    return q.order_by(SuspiciousTransactionReport.created_at.desc()).all()
+
+
+@router.patch("/str/reports/{report_id}", response_model=StrReportOut)
+def update_str_status(
+    report_id: int,
+    payload: StrReportStatusUpdate,
+    db: Session = Depends(get_db),
+) -> SuspiciousTransactionReport:
+    report = db.get(SuspiciousTransactionReport, report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="STR report not found")
+
+    report.status = payload.status
+    report.reviewed_by = payload.reviewed_by or "compliance_officer"
+    report.reviewed_at = datetime.utcnow()
+    db.commit()
+    db.refresh(report)
+    return report
+
+
 @router.get("/{customer_id}/profile", response_model=CustomerProfileOut)
 def get_customer_profile(
     customer_id: int,
@@ -308,7 +366,22 @@ def submit_str(
 
     reason = (payload or {}).get("reason") or customer.flag_reason or "Suspicious activity observed"
     note = (payload or {}).get("note")
-    str_ref = f"STR-{dt_date.today().strftime('%Y%m%d')}-{customer_id:06d}"
+    str_ref = _next_str_reference(db)
+    filed_by = (payload or {}).get("filed_by") or customer.miner_reg_number or "system"
+
+    report = SuspiciousTransactionReport(
+        reference=str_ref,
+        customer_id=customer.id,
+        customer_number=customer.customer_number,
+        customer_name=customer.full_name,
+        customer_national_id=customer.national_id,
+        reason=reason,
+        note=note,
+        status="Submitted",
+        filed_by=filed_by,
+    )
+    db.add(report)
+
     detail = f"{str_ref} filed for customer {customer.customer_number or customer.national_id}: {reason}"
     if note:
         detail += f" | Note: {note}"
@@ -319,7 +392,7 @@ def submit_str(
         entity_type="customer",
         entity_ref=str(customer_id),
         detail=detail,
-        actor=customer.miner_reg_number or "system",
+        actor=filed_by,
     )
     db.commit()
     return {"str_reference": str_ref, "status": "submitted"}
@@ -377,3 +450,40 @@ def update_customer(
     db.commit()
     db.refresh(customer)
     return customer
+
+
+@router.delete("/{customer_id}", status_code=204)
+def delete_customer(
+    customer_id: int,
+    db: Session = Depends(get_db),
+):
+    customer = db.get(Customer, customer_id)
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+
+    # Keep transaction history but unlink customer reference.
+    txns = db.query(GoldTransaction).filter(GoldTransaction.customer_id == customer_id).all()
+    for txn in txns:
+        txn.customer_id = None
+        txn.customer_name = customer.full_name
+        txn.customer_id_number = customer.national_id
+
+    # Remove STR reports for this customer.
+    db.query(SuspiciousTransactionReport).filter(
+        SuspiciousTransactionReport.customer_id == customer_id
+    ).delete()
+
+    log_event(
+        db,
+        action="customer_deleted",
+        entity_type="customer",
+        entity_ref=str(customer_id),
+        detail=(
+            f"Customer deleted: {customer.full_name} "
+            f"({customer.customer_number or customer.national_id})"
+        ),
+        actor="admin",
+    )
+
+    db.delete(customer)
+    db.commit()

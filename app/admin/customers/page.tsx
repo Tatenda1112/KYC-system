@@ -45,6 +45,7 @@ export default function AdminCustomersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [strSubmittingId, setStrSubmittingId] = useState<number | null>(null);
   const [strMessage, setStrMessage] = useState('');
+  const [deleteLoadingId, setDeleteLoadingId] = useState<number | null>(null);
 
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
@@ -114,6 +115,25 @@ export default function AdminCustomersPage() {
       setStrMessage(err instanceof Error ? err.message : 'Failed to submit STR');
     } finally {
       setStrSubmittingId(null);
+    }
+  };
+
+  const deleteCustomer = async (customer: CustomerRow) => {
+    const ok = window.confirm(`Delete customer "${customer.full_name}" (${customer.national_id})?`);
+    if (!ok) return;
+    setDeleteLoadingId(customer.id);
+    setLoadError('');
+    try {
+      const res = await fetch(`/api/customers/${customer.id}`, { method: 'DELETE' });
+      if (!res.ok && res.status !== 204) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data?.detail || 'Failed to delete customer');
+      }
+      setCustomers(prev => prev.filter(c => c.id !== customer.id));
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'Failed to delete customer');
+    } finally {
+      setDeleteLoadingId(null);
     }
   };
 
@@ -236,15 +256,16 @@ export default function AdminCustomersPage() {
                   <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[9%]">Risk</th>
                   <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[8%]">Trans.</th>
                   <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[12%]">Total value</th>
-                  <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[14%]">Flag / PEP</th>
-                  <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[10%]">STR</th>
+                  <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[12%]">Flag / PEP</th>
+                  <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[8%]">STR</th>
+                  <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[8%]">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {loading ? (
                   Array.from({ length: 6 }).map((_, i) => (
                     <tr key={i} className="border-b border-gray-100">
-                      {Array.from({ length: 9 }).map((__, j) => (
+                      {Array.from({ length: 10 }).map((__, j) => (
                         <td key={j} className="py-2.5 px-3">
                           <div className="h-3 bg-gray-100 rounded animate-pulse" />
                         </td>
@@ -253,7 +274,7 @@ export default function AdminCustomersPage() {
                   ))
                 ) : paginated.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="py-10 text-center text-xs text-gray-400">
+                    <td colSpan={10} className="py-10 text-center text-xs text-gray-400">
                       {customers.length === 0
                         ? 'No customers registered yet.'
                         : 'No customers match the filters.'}
@@ -315,6 +336,16 @@ export default function AdminCustomersPage() {
                         ) : (
                           <span className="text-xs text-gray-400">-</span>
                         )}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); deleteCustomer(c); }}
+                          disabled={deleteLoadingId === c.id}
+                          className="text-xs px-2.5 py-1 rounded border border-red-300 bg-red-100 text-red-800 hover:bg-red-200 transition disabled:opacity-60"
+                        >
+                          {deleteLoadingId === c.id ? 'Deleting...' : 'Delete'}
+                        </button>
                       </td>
                     </tr>
                   ))

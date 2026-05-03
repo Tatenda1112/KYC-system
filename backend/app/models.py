@@ -288,3 +288,26 @@ class GoldTransaction(Base):
     # Auto-computed compliance flags
     is_flagged: Mapped[bool] = mapped_column(Boolean, default=False)
     flag_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class SuspiciousTransactionReport(Base):
+    """Formal STR filed against a customer for AML/compliance review."""
+
+    __tablename__ = "str_reports"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), index=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    reference: Mapped[str] = mapped_column(String(80), unique=True, index=True)
+    customer_id: Mapped[int] = mapped_column(Integer, ForeignKey("customers.id"), index=True)
+    customer_number: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    customer_name: Mapped[str] = mapped_column(String(200))
+    customer_national_id: Mapped[str] = mapped_column(String(80))
+
+    reason: Mapped[str] = mapped_column(Text)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    status: Mapped[str] = mapped_column(String(30), default="Submitted")  # Submitted/Under Review/Escalated/Closed
+    filed_by: Mapped[str] = mapped_column(String(120), default="system")
+    reviewed_by: Mapped[str | None] = mapped_column(String(120), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

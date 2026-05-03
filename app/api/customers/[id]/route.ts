@@ -36,3 +36,23 @@ export async function PUT(
     return NextResponse.json({ detail: 'Failed to update customer' }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { id } = await params;
+    const res = await fetch(`${BACKEND}/customers/${id}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok && res.status !== 204) {
+      const data = await res.json().catch(() => ({}));
+      return NextResponse.json(data, { status: res.status });
+    }
+    return new NextResponse(null, { status: 204 });
+  } catch (err) {
+    console.error('Customer DELETE error:', err);
+    return NextResponse.json({ detail: 'Failed to delete customer' }, { status: 500 });
+  }
+}
