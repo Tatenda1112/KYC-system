@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface NavItem {
@@ -18,13 +19,30 @@ interface SidebarProps {
 
 export default function Sidebar({ role, activePage, userName, kycStatus }: SidebarProps) {
   const router = useRouter();
+  const [resolvedName, setResolvedName] = useState(userName ?? '');
 
   const handleLogout = async () => {
     // Clear localStorage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('minerName');
     router.push('/login');
   };
+
+  useEffect(() => {
+    setResolvedName(userName ?? '');
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    fetch('/api/auth/me', {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    })
+      .then(r => (r.ok ? r.json() : null))
+      .then(data => {
+        if (data?.full_name) setResolvedName(data.full_name);
+      })
+      .catch(() => {});
+  }, [userName]);
 
   const getNavItems = (): NavItem[] => {
     switch (role) {
@@ -129,15 +147,15 @@ export default function Sidebar({ role, activePage, userName, kycStatus }: Sideb
 
       {/* User Info */}
       <div className="border-t border-gray-800">
-        {userName && (
+        {resolvedName && (
           <div className="flex items-center gap-2.5 px-4 py-3">
             <div className="w-7 h-7 rounded-full bg-gray-700 flex items-center justify-center flex-shrink-0">
               <span className="text-xs font-medium text-gray-300">
-                {userName.charAt(0).toUpperCase()}
+                {resolvedName.charAt(0).toUpperCase()}
               </span>
             </div>
             <div className="min-w-0">
-              <div className="text-xs text-gray-300 truncate leading-tight">{userName}</div>
+              <div className="text-xs text-gray-300 truncate leading-tight">{resolvedName}</div>
               <div className="text-xs text-gray-600 capitalize leading-tight mt-0.5">{role.replace('_', ' ')}</div>
             </div>
           </div>

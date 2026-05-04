@@ -119,8 +119,16 @@ export default function AdminCustomersPage() {
   };
 
   const deleteCustomer = async (customer: CustomerRow) => {
-    const ok = window.confirm(`Delete customer "${customer.full_name}" (${customer.national_id})?`);
-    if (!ok) return;
+    const confirmedName = window.prompt(
+      `Type the full customer name to confirm deletion:\n\n${customer.full_name}`,
+      '',
+    );
+    if (confirmedName !== customer.full_name) {
+      if (confirmedName !== null) {
+        setLoadError('Name confirmation did not match. Customer was not deleted.');
+      }
+      return;
+    }
     setDeleteLoadingId(customer.id);
     setLoadError('');
     try {
