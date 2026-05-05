@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.auth_utils import hash_password
+from app.config import settings
 from app.database import get_db
 from app.deps import get_current_user
 from app.models import User, MinerRegistration, KycRegistration, AuditLog, GoldTransaction
@@ -180,7 +181,7 @@ def delete_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    if user.email == "tatendatatenda1112@gmail.com":
+    if user.email == settings.default_admin_email.strip().lower():
         raise HTTPException(status_code=400, detail="Cannot delete the super-admin account")
 
     try:

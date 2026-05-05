@@ -59,14 +59,15 @@ export default function Sidebar({ role, activePage, userName, kycStatus }: Sideb
           { id: 'audit', label: 'Audit log', href: '/admin/audit' },
         ];
       case 'miner': {
+        const isApproved = kycStatus === 'Verified';
         return [
           { id: 'dashboard', label: 'Dashboard', href: '/miner/dashboard' },
           { id: 'registerkyc', label: 'KYC Profile', href: '/miner/register' },
-          { id: 'mycustomers', label: 'Customers', href: '/miner/customers' },
-          { id: 'str', label: 'STR Centre', href: '/miner/str' },
-          { id: 'recordsale', label: 'New Sale', href: '/miner/transactions/new' },
-          { id: 'mytransactions', label: 'Sales History', href: '/miner/transactions' },
-          { id: 'reports', label: 'Reports', href: '/miner/reports' },
+          { id: 'mycustomers', label: 'Customers', href: '/miner/customers', locked: !isApproved },
+          { id: 'str', label: 'STR Centre', href: '/miner/str', locked: !isApproved },
+          { id: 'recordsale', label: 'New Sale', href: '/miner/transactions/new', locked: !isApproved },
+          { id: 'mytransactions', label: 'Sales History', href: '/miner/transactions', locked: !isApproved },
+          { id: 'reports', label: 'Reports', href: '/miner/reports', locked: !isApproved },
           { id: 'changepassword', label: 'Account Security', href: '/change-password' },
         ];
       }
@@ -113,7 +114,8 @@ export default function Sidebar({ role, activePage, userName, kycStatus }: Sideb
           return (
             <a
               key={item.href}
-              href={item.href}
+              href={item.locked ? '#' : item.href}
+              onClick={item.locked ? (e) => e.preventDefault() : undefined}
               className={`flex items-center gap-2 px-4 py-2 text-xs transition-colors ${
                 isActive
                   ? 'bg-gray-800 text-white'

@@ -295,6 +295,7 @@ class CustomerCreate(BaseModel):
     guardian_full_name: str | None = Field(None, max_length=200)
     guardian_national_id: str | None = Field(None, max_length=80)
     guardian_phone: str | None = Field(None, max_length=40)
+    compliance_level: int = Field(50, ge=0, le=100)
 
     @field_validator(
         "nationality", "district", "id_document_type", "phone_number", "email",
@@ -357,6 +358,7 @@ class CustomerOut(BaseModel):
     guardian_full_name: str | None
     guardian_national_id: str | None
     guardian_phone: str | None
+    compliance_level: int
     risk_level: str
     is_flagged: bool
     flag_reason: str | None
@@ -399,6 +401,7 @@ class CustomerUpdate(BaseModel):
     guardian_full_name: str | None = Field(None, max_length=200)
     guardian_national_id: str | None = Field(None, max_length=80)
     guardian_phone: str | None = Field(None, max_length=40)
+    compliance_level: int | None = Field(None, ge=0, le=100)
 
     @field_validator(
         "nationality", "district", "id_document_type", "phone_number", "email",
@@ -461,6 +464,7 @@ class CustomerAdminRow(BaseModel):
     guardian_full_name: str | None
     guardian_national_id: str | None
     guardian_phone: str | None
+    compliance_level: int
     risk_level: str
     is_flagged: bool
     flag_reason: str | None

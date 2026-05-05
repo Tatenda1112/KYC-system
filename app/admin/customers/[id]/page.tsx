@@ -44,6 +44,7 @@ interface CustomerProfile {
     pep_details: string | null;
     known_sanctions: boolean;
     sanctions_details: string | null;
+    compliance_level: number;
     risk_level: string;
     is_flagged: boolean;
     flag_reason: string | null;
@@ -88,6 +89,9 @@ export default function AdminCustomerProfilePage({
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [complianceLevel, setComplianceLevel] = useState<number>(50);
+  const [savingCompliance, setSavingCompliance] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -102,6 +106,7 @@ export default function AdminCustomerProfilePage({
           throw new Error(data?.detail ?? 'Failed to load customer profile');
         }
         setProfile(data);
+        setComplianceLevel(data.customer?.compliance_level ?? 50);
       })
       .catch((err) => {
         if (!active) return;
@@ -148,6 +153,26 @@ export default function AdminCustomerProfilePage({
   }
 
   const { customer } = profile;
+
+  const saveComplianceLevel = async () => {
+    setSavingCompliance(true);
+    setSaveMessage('');
+    try {
+      const res = await fetch(`/api/customers/${customer.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ compliance_level: complianceLevel }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.detail || 'Failed to update compliance level');
+      setProfile(prev => (prev ? { ...prev, customer: data } : prev));
+      setSaveMessage('Compliance level updated.');
+    } catch (err) {
+      setSaveMessage(err instanceof Error ? err.message : 'Failed to update compliance level');
+    } finally {
+      setSavingCompliance(false);
+    }
+  };
 
   return (
     <div className="flex h-screen">
@@ -216,6 +241,28 @@ export default function AdminCustomerProfilePage({
                 {customer.flag_reason || customer.sanctions_details}
               </div>
             )}
+            <div className="mt-3 border-t border-gray-100 pt-3 flex items-end gap-2">
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Compliance level (0-100)</div>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  value={complianceLevel}
+                  onChange={e => setComplianceLevel(Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
+                  className="h-8 w-28 border border-gray-200 rounded bg-white px-2 text-xs text-gray-700"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={saveComplianceLevel}
+                disabled={savingCompliance}
+                className="h-8 px-3 text-xs rounded bg-gray-900 text-white disabled:opacity-50"
+              >
+                {savingCompliance ? 'Saving...' : 'Save'}
+              </button>
+              {saveMessage && <div className="text-xs text-gray-500">{saveMessage}</div>}
+            </div>
           </div>
 
           <div className="grid grid-cols-6 gap-3">

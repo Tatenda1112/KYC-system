@@ -42,9 +42,17 @@ def _assess_risk(payload: CustomerCreate | CustomerUpdate | Customer) -> tuple[s
     if minor:
         reasons.append("Minor customer - guardian verification required")
 
+    compliance_level = int(getattr(payload, "compliance_level", 50) or 0)
+    if compliance_level >= 76:
+        derived_risk = "low"
+    elif compliance_level >= 60:
+        derived_risk = "medium"
+    else:
+        derived_risk = "high"
+
     if reasons:
         return "high", True, "; ".join(reasons)
-    return "medium", False, None
+    return derived_risk, False, None
 
 
 def _next_customer_number(db: Session) -> str:
@@ -200,6 +208,7 @@ def list_customers_admin(
                 guardian_full_name=c.guardian_full_name,
                 guardian_national_id=c.guardian_national_id,
                 guardian_phone=c.guardian_phone,
+                compliance_level=c.compliance_level,
                 risk_level=c.risk_level,
                 is_flagged=c.is_flagged,
                 flag_reason=c.flag_reason,

@@ -116,6 +116,7 @@ export default function AddCustomerPage() {
   const [guardianFullName, setGuardianFullName] = useState('');
   const [guardianNationalId, setGuardianNationalId] = useState('');
   const [guardianPhone, setGuardianPhone] = useState('');
+  const [complianceLevel, setComplianceLevel] = useState(50);
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -253,6 +254,7 @@ export default function AddCustomerPage() {
       guardian_full_name: guardianFullName.trim() || null,
       guardian_national_id: guardianNationalId.trim() || null,
       guardian_phone: guardianPhone.trim() || null,
+      compliance_level: complianceLevel,
     };
 
     try {
@@ -280,6 +282,20 @@ export default function AddCustomerPage() {
 
   const fc = (field: string) =>
     `${inputBase} ${errors[field] ? 'border-gray-800' : 'border-gray-200'}`;
+
+  if (minerKycStatus && minerKycStatus !== 'Verified') {
+    return (
+      <div className="flex h-screen">
+        <Sidebar role="miner" activePage="mycustomers" userName={minerName || undefined} kycStatus={minerKycStatus || undefined} />
+        <div className="flex-1 flex items-center justify-center bg-gray-50">
+          <div className="max-w-md bg-white border border-gray-200 rounded-lg p-5">
+            <div className="text-sm font-medium text-gray-800 mb-2">Profile locked pending admin approval</div>
+            <div className="text-xs text-gray-500">Your KYC status is {minerKycStatus}. Customer registration unlocks once admin approves your profile.</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen">
@@ -791,6 +807,18 @@ export default function AddCustomerPage() {
                       </div>
                     </div>
                   )}
+
+                  <div>
+                    <label className="text-xs text-gray-500 mb-1 block">Compliance level (0-100)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={complianceLevel}
+                      onChange={e => setComplianceLevel(Math.max(0, Math.min(100, Number(e.target.value) || 0)))}
+                      className={`${inputBase} border-gray-200`}
+                    />
+                  </div>
                 </div>
               </div>
 

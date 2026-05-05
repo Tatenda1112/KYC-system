@@ -248,6 +248,7 @@ class Customer(Base):
     sanctions_details: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Risk assessment
+    compliance_level: Mapped[int] = mapped_column(Integer, default=50)
     risk_level: Mapped[str] = mapped_column(String(20), default="medium")  # high / medium / low
     is_flagged: Mapped[bool] = mapped_column(Boolean, default=False)
     flag_reason: Mapped[str | None] = mapped_column(Text, nullable=True)

@@ -87,6 +87,8 @@ def run_startup_migrations() -> None:
             statements.append("ALTER TABLE customers ADD COLUMN guardian_national_id VARCHAR(80)")
         if "guardian_phone" not in existing_customer_columns:
             statements.append("ALTER TABLE customers ADD COLUMN guardian_phone VARCHAR(40)")
+        if "compliance_level" not in existing_customer_columns:
+            statements.append("ALTER TABLE customers ADD COLUMN compliance_level INTEGER DEFAULT 50")
 
     if "gold_transactions" in tables:
         existing_txn_columns = {

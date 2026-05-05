@@ -44,6 +44,7 @@ export default function MinerCustomersPage() {
   const [strMessage, setStrMessage] = useState('');
   const [minerRegNumber, setMinerRegNumber] = useState<string | null>(null);
   const [minerName, setMinerName] = useState('');
+  const [minerKycStatus, setMinerKycStatus] = useState('');
 
   const fetchCustomers = useCallback(async (reg: string) => {
     setLoading(true);
@@ -66,8 +67,10 @@ export default function MinerCustomersPage() {
   useEffect(() => {
     const reg = localStorage.getItem('minerRegNumber');
     const name = localStorage.getItem('minerName') ?? '';
+    const status = localStorage.getItem('minerKycStatus') ?? '';
     setMinerRegNumber(reg);
     setMinerName(name);
+    setMinerKycStatus(status);
 
     const token = localStorage.getItem('token');
     if (token) {
@@ -85,6 +88,10 @@ export default function MinerCustomersPage() {
           if (user?.full_name) {
             setMinerName(user.full_name);
             localStorage.setItem('minerName', user.full_name);
+          }
+          if (user?.miner_kyc_status) {
+            setMinerKycStatus(user.miner_kyc_status);
+            localStorage.setItem('minerKycStatus', user.miner_kyc_status);
           }
         })
         .catch(() => {});
@@ -152,7 +159,7 @@ export default function MinerCustomersPage() {
 
   return (
     <div className="flex h-screen">
-      <Sidebar role="miner" activePage="mycustomers" userName={minerName || undefined} />
+      <Sidebar role="miner" activePage="mycustomers" userName={minerName || undefined} kycStatus={minerKycStatus || undefined} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="h-12 bg-white border-b border-gray-100 flex items-center justify-between px-5">
           <div className="flex items-center gap-2">
@@ -163,6 +170,7 @@ export default function MinerCustomersPage() {
           </div>
           <button
             onClick={() => router.push('/miner/customers/new')}
+            disabled={minerKycStatus !== 'Verified'}
             className="bg-gray-900 text-white text-sm px-4 py-2 rounded-md hover:bg-gray-800 transition"
           >
             + Add customer

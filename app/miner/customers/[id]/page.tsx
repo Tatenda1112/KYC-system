@@ -44,6 +44,7 @@ interface CustomerProfile {
     pep_details: string | null;
     known_sanctions: boolean;
     sanctions_details: string | null;
+    compliance_level: number;
     risk_level: string;
     is_flagged: boolean;
     flag_reason: string | null;
@@ -290,6 +291,9 @@ export default function MinerCustomerProfilePage({
                   className={`text-xs capitalize px-2 py-0.5 rounded ${riskBadgeClass(customer.risk_level)}`}
                 >
                   {customer.risk_level}
+                </span>
+                <span className="text-xs px-2 py-0.5 rounded bg-gray-100 text-gray-700">
+                  Compliance {customer.compliance_level}/100
                 </span>
                 {customer.is_flagged && (
                   <span className="text-xs px-2 py-0.5 rounded bg-gray-900 text-white">

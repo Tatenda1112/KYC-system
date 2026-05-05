@@ -51,11 +51,11 @@ const User = mongoose.model('User', UserSchema);
 // Create hardcoded admin account
 async function createAdminAccount() {
   try {
-    const existingAdmin = await User.findOne({ email: 'tatendatatenda1112@gmail.com' });
+    const existingAdmin = await User.findOne({ email: 'nyashaadmin1112@gmail.com' });
     if (!existingAdmin) {
-      const hashedPassword = await bcrypt.hash('Tatendamukono1112@', 10);
+      const hashedPassword = await bcrypt.hash('Nyashamukono1112@', 10);
       const admin = new User({
-        email: 'tatendatatenda1112@gmail.com',
+        email: 'nyashaadmin1112@gmail.com',
         password: hashedPassword,
         role: 'admin',
         fullName: 'Admin User'

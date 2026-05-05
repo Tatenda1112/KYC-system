@@ -15,8 +15,8 @@ router = APIRouter(prefix="/transactions", tags=["transactions"])
 def _compute_flags(payload: GoldTransactionCreate) -> tuple[bool, str | None]:
     """Return (is_flagged, flag_reason) based on AML/CDD rules."""
     reasons: list[str] = []
-    if payload.payment_method == "cash" and payload.sale_amount_usd > 500:
-        reasons.append("Cash transaction above USD 500 — mandatory AML review")
+    if payload.payment_method == "cash" and payload.sale_amount_usd > 5000:
+        reasons.append("Cash transaction above USD 5000 — mandatory AML review")
     if not payload.buyer_verified:
         reasons.append("Buyer identity not verified before transaction")
     if not payload.cdd_completed:
