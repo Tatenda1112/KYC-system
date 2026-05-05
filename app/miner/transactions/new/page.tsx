@@ -211,27 +211,6 @@ export default function RecordGoldSalePage() {
     { label: 'Mobile money', value: 'mobile' },
   ];
 
-  if (minerKycStatus && minerKycStatus !== 'Verified') {
-    return (
-      <div className="flex h-screen">
-        <Sidebar role="miner" activePage="recordsale" kycStatus={minerKycStatus || undefined} />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="h-12 bg-white border-b border-gray-100 flex items-center px-5">
-            <div className="text-sm font-medium text-gray-800">Record new sale</div>
-          </div>
-          <div className="flex-1 flex items-center justify-center bg-gray-50">
-            <div className="text-center max-w-sm">
-              <div className="text-sm font-medium text-gray-800 mb-2">Entry locked</div>
-              <div className="text-xs text-gray-400 leading-relaxed">
-                Your KYC status is {minerKycStatus}. You can record transactions after an administrator verifies your registration.
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const CddToggle = ({
     value,
     onChange,

@@ -3,12 +3,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '../../../components/Sidebar';
-import { fmtDate } from '../../../lib/date';
 
-interface Customer {
+const ITEMS_PER_PAGE = 10;
+
+interface CustomerRow {
   id: number;
   full_name: string;
   national_id: string;
+  miner_reg_number: string | null;
   risk_level: string;
   is_flagged: boolean;
   politically_exposed: boolean;
@@ -18,41 +20,40 @@ interface Customer {
   created_at: string;
 }
 
-function getInitials(name: string) {
-  return name
-    .split(' ')
-    .slice(0, 2)
-    .map(p => p.charAt(0).toUpperCase())
-    .join('');
+function fmtCurrency(v: number) {
+  return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-const RISK_STYLE: Record<string, string> = {
-  high: 'text-xs text-red-700 font-semibold',
-  medium: 'text-xs text-amber-700 font-semibold',
-  low: 'text-xs text-emerald-700 font-semibold',
+const RISK_BADGE: Record<string, string> = {
+  high: 'bg-red-100 text-red-800 border border-red-300',
+  medium: 'bg-amber-100 text-amber-800 border border-amber-300',
+  low: 'bg-emerald-100 text-emerald-800 border border-emerald-300',
 };
 
 export default function MinerCustomersPage() {
   const router = useRouter();
-
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [search, setSearch] = useState('');
+  const [riskFilter, setRiskFilter] = useState('all');
+  const [flaggedOnly, setFlaggedOnly] = useState(false);
+  const [pepOnly, setPepOnly] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [strSubmittingId, setStrSubmittingId] = useState<number | null>(null);
+  const [strMessage, setStrMessage] = useState('');
   const [minerRegNumber, setMinerRegNumber] = useState<string | null>(null);
   const [minerName, setMinerName] = useState('');
-  const [minerKycStatus, setMinerKycStatus] = useState('');
 
   const fetchCustomers = useCallback(async (reg: string) => {
     setLoading(true);
+    setLoadError('');
     try {
-      setLoadError('');
-      const res = await fetch(
-        `/api/customers?miner_reg_number=${encodeURIComponent(reg)}`,
-        { cache: 'no-store' },
-      );
+      const res = await fetch(`/api/customers?miner_reg_number=${encodeURIComponent(reg)}`, {
+        cache: 'no-store',
+      });
       if (!res.ok) throw new Error('Failed to load customers');
-      const data: { customers?: Customer[]; error: string | null } = await res.json();
+      const data: { customers?: CustomerRow[]; error: string | null } = await res.json();
       setCustomers(Array.isArray(data.customers) ? data.customers : []);
       if (data.error) setLoadError(data.error);
     } catch (err) {
@@ -65,10 +66,8 @@ export default function MinerCustomersPage() {
   useEffect(() => {
     const reg = localStorage.getItem('minerRegNumber');
     const name = localStorage.getItem('minerName') ?? '';
-    const status = localStorage.getItem('minerKycStatus') ?? '';
     setMinerRegNumber(reg);
     setMinerName(name);
-    setMinerKycStatus(status);
 
     const token = localStorage.getItem('token');
     if (token) {
@@ -87,73 +86,80 @@ export default function MinerCustomersPage() {
             setMinerName(user.full_name);
             localStorage.setItem('minerName', user.full_name);
           }
-          if (user?.miner_kyc_status) {
-            setMinerKycStatus(user.miner_kyc_status);
-            localStorage.setItem('minerKycStatus', user.miner_kyc_status);
-          }
         })
         .catch(() => {});
     }
 
-    if (reg) {
-      fetchCustomers(reg);
-    } else {
-      setLoading(false);
-    }
+    if (reg) fetchCustomers(reg);
+    else setLoading(false);
   }, [fetchCustomers]);
 
+  const submitStr = async (customer: CustomerRow) => {
+    setStrMessage('');
+    setStrSubmittingId(customer.id);
+    const defaultReason =
+      customer.risk_level === 'high'
+        ? 'High-risk customer profile requires suspicious transaction review'
+        : customer.is_flagged
+        ? 'Customer flagged for suspicious activity review'
+        : 'Suspicious activity observed';
+    const reason = window.prompt('Enter STR reason (required):', defaultReason);
+    if (!reason || !reason.trim()) {
+      setStrSubmittingId(null);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/customers/${customer.id}/str`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reason: reason.trim(),
+          filed_by: minerRegNumber ?? undefined,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.detail || 'Failed to submit STR');
+      setStrMessage(`STR submitted for ${customer.full_name}: ${data.str_reference ?? 'reference generated'}`);
+    } catch (err) {
+      setStrMessage(err instanceof Error ? err.message : 'Failed to submit STR');
+    } finally {
+      setStrSubmittingId(null);
+    }
+  };
+
   const filtered = customers.filter(c => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return c.full_name.toLowerCase().includes(q) || c.national_id.toLowerCase().includes(q);
+    if (riskFilter !== 'all' && c.risk_level !== riskFilter) return false;
+    if (flaggedOnly && !c.is_flagged) return false;
+    if (pepOnly && !c.politically_exposed) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      if (!c.full_name.toLowerCase().includes(q) && !c.national_id.toLowerCase().includes(q)) return false;
+    }
+    return true;
   });
 
-  // Stats
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const startIdx = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginated = filtered.slice(startIdx, startIdx + ITEMS_PER_PAGE);
+
   const now = new Date();
-  const activeThisMonth = customers.filter(c => {
-    if (!c.last_transaction) return false;
-    const d = new Date(c.last_transaction);
+  const newThisMonth = customers.filter(c => {
+    const d = new Date(c.created_at);
     return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
   }).length;
   const flaggedCount = customers.filter(c => c.is_flagged).length;
   const pepCount = customers.filter(c => c.politically_exposed).length;
 
-  if (!loading && minerKycStatus && minerKycStatus !== 'Verified') {
-    return (
-      <div className="flex h-screen">
-        <Sidebar role="miner" activePage="mycustomers" userName={minerName || undefined} kycStatus={minerKycStatus} />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="h-12 bg-white border-b border-gray-100 flex items-center px-5">
-            <div className="text-sm font-semibold text-slate-900">My customers</div>
-          </div>
-          <div className="flex-1 flex items-center justify-center bg-gray-50">
-            <div className="text-center max-w-sm">
-              <div className="text-sm font-medium text-gray-800 mb-2">Customers locked</div>
-              <div className="text-xs text-gray-400 leading-relaxed">
-                Your KYC status is {minerKycStatus}. Customer management is available after an
-                administrator verifies your registration.
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex h-screen">
       <Sidebar role="miner" activePage="mycustomers" userName={minerName || undefined} />
-
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* TOPBAR */}
         <div className="h-12 bg-white border-b border-gray-100 flex items-center justify-between px-5">
           <div className="flex items-center gap-2">
             <div className="text-sm font-semibold text-slate-900">My customers</div>
-            {!loading && (
-              <div className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                {customers.length}
-              </div>
-            )}
+            <div className="text-xs text-blue-800 bg-blue-100 px-2 py-0.5 rounded-full font-semibold">
+              {loading ? '...' : `${customers.length} total`}
+            </div>
           </div>
           <button
             onClick={() => router.push('/miner/customers/new')}
@@ -164,122 +170,187 @@ export default function MinerCustomersPage() {
         </div>
 
         <div className="flex-1 overflow-auto bg-gray-50">
-
-          {/* STAT STRIP */}
-          <div className="bg-white border-b border-gray-100 px-5 py-3 flex gap-6">
-            {[
-              { label: 'Total customers', value: loading ? '…' : customers.length },
-              { label: 'Active this month', value: loading ? '…' : activeThisMonth },
-              { label: 'Flagged', value: loading ? '…' : flaggedCount },
-              { label: 'PEP customers', value: loading ? '…' : pepCount },
-            ].map(stat => (
-              <div key={stat.label}>
-                <div className="text-xs text-gray-400">{stat.label}</div>
-                <div className="text-sm font-medium text-gray-900 mt-0.5">{stat.value}</div>
-              </div>
-            ))}
-          </div>
-
           {loadError && (
-            <div className="mx-5 mt-4 border-l-2 border-gray-400 bg-white pl-3 py-2 rounded-r">
-              <div className="text-xs text-gray-600">{loadError}</div>
+            <div className="px-5 pt-4">
+              <div className="border-l-2 border-gray-400 bg-white rounded-r px-3 py-2">
+                <div className="text-xs text-gray-600">{loadError}</div>
+              </div>
+            </div>
+          )}
+          {strMessage && (
+            <div className="px-5 pt-4">
+              <div className="border-l-2 border-gray-400 bg-white rounded-r px-3 py-2">
+                <div className="text-xs text-gray-600">{strMessage}</div>
+              </div>
             </div>
           )}
 
-          {/* SEARCH */}
-          <div className="px-5 pt-4">
+          <div className="grid grid-cols-4 gap-3 px-5 pt-4 pb-3">
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="text-xs text-gray-400 mb-1">Total customers</div>
+              <div className="text-2xl font-medium text-gray-900">{loading ? '...' : customers.length}</div>
+              <div className="text-xs text-gray-400 mt-0.5">in your portfolio</div>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="text-xs text-gray-400 mb-1">Flagged customers</div>
+              <div className="text-2xl font-medium text-gray-900">{loading ? '...' : flaggedCount}</div>
+              <div className="text-xs text-gray-400 mt-0.5">require review</div>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="text-xs text-gray-400 mb-1">PEP customers</div>
+              <div className="text-2xl font-medium text-gray-900">{loading ? '...' : pepCount}</div>
+              <div className="text-xs text-gray-400 mt-0.5">enhanced due diligence</div>
+            </div>
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="text-xs text-gray-400 mb-1">New this month</div>
+              <div className="text-2xl font-medium text-gray-900">{loading ? '...' : newThisMonth}</div>
+              <div className="text-xs text-gray-400 mt-0.5">recently registered</div>
+            </div>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-lg mx-5 mb-3 px-4 py-3 flex items-center gap-2 flex-wrap">
+            <select
+              value={riskFilter}
+              onChange={e => { setRiskFilter(e.target.value); setCurrentPage(1); }}
+              className="h-8 text-xs border border-gray-200 rounded bg-white px-2 text-gray-600"
+            >
+              <option value="all">All risk levels</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
+            </select>
+            <button
+              type="button"
+              onClick={() => { setFlaggedOnly(v => !v); setCurrentPage(1); }}
+              className={`h-8 text-xs px-3 rounded border transition ${
+                flaggedOnly ? 'bg-red-700 text-white border-red-700' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+              }`}
+            >
+              Flagged only
+            </button>
+            <button
+              type="button"
+              onClick={() => { setPepOnly(v => !v); setCurrentPage(1); }}
+              className={`h-8 text-xs px-3 rounded border transition ${
+                pepOnly ? 'bg-amber-700 text-white border-amber-700' : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+              }`}
+            >
+              PEP only
+            </button>
             <input
               type="text"
+              placeholder="Search by name or ID..."
               value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search by name or national ID..."
-              className="w-full h-9 border border-gray-200 rounded-md bg-white px-3 text-sm text-gray-800 focus:outline-none focus:border-gray-800"
+              onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+              className="flex-1 h-8 border border-gray-200 rounded bg-white px-3 text-xs text-gray-600 focus:outline-none focus:border-gray-800"
             />
           </div>
 
-          {/* CUSTOMER LIST */}
-          <div className="mt-3 px-5 space-y-2 pb-6">
-            {loading ? (
-              Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="bg-white border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-gray-100 animate-pulse" />
-                    <div className="flex-1 space-y-1.5">
-                      <div className="h-3 bg-gray-100 rounded animate-pulse w-32" />
-                      <div className="h-3 bg-gray-100 rounded animate-pulse w-48" />
-                    </div>
-                  </div>
-                </div>
-              ))
-            ) : filtered.length === 0 ? (
-              <div className="bg-white border border-gray-200 rounded-lg py-12 text-center">
-                {customers.length === 0 ? (
-                  <div>
-                    <div className="text-xs text-gray-500 mb-3">No customers recorded yet.</div>
-                    <button
-                      onClick={() => router.push('/miner/customers/new')}
-                      className="text-xs text-gray-500 border border-gray-200 px-3 py-1.5 rounded hover:bg-gray-50"
-                    >
-                      Add your first customer
-                    </button>
-                  </div>
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden mx-5">
+            <table className="w-full table-fixed border-collapse">
+              <thead className="bg-slate-100">
+                <tr>
+                  <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[20%]">Customer name</th>
+                  <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[14%]">National ID</th>
+                  <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[10%]">Risk</th>
+                  <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[9%]">Trans.</th>
+                  <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[12%]">Total value</th>
+                  <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[13%]">Last transaction</th>
+                  <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[12%]">Flag / PEP</th>
+                  <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[10%]">STR</th>
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  Array.from({ length: 6 }).map((_, i) => (
+                    <tr key={i} className="border-b border-gray-100">
+                      {Array.from({ length: 8 }).map((__, j) => (
+                        <td key={j} className="py-2.5 px-3"><div className="h-3 bg-gray-100 rounded animate-pulse" /></td>
+                      ))}
+                    </tr>
+                  ))
+                ) : paginated.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-10 text-center text-xs text-gray-400">
+                      {customers.length === 0 ? 'No customers registered yet.' : 'No customers match the filters.'}
+                    </td>
+                  </tr>
                 ) : (
-                  <div className="text-xs text-gray-400">No customers match your search.</div>
-                )}
-              </div>
-            ) : (
-              filtered.map(c => (
-                <div
-                  key={c.id}
-                  className="bg-white border border-gray-200 rounded-lg p-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition"
-                  onClick={() => router.push(`/miner/customers/${c.id}`)}
-                >
-                  {/* Left */}
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
-                      <span className="text-xs font-medium text-gray-600">{getInitials(c.full_name)}</span>
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-900 font-medium">{c.full_name}</div>
-                      <div className="flex gap-3 mt-0.5">
-                        <span className="text-xs text-gray-400">{c.national_id}</span>
-                        <span className="text-xs text-gray-400">{c.total_transactions} transaction{c.total_transactions !== 1 ? 's' : ''}</span>
-                        {c.last_transaction && (
-                          <span className="text-xs text-gray-400">Last: {fmtDate(c.last_transaction)}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right */}
-                  <div className="flex items-center gap-2">
-                    {c.is_flagged && (
-                      <span className="bg-red-100 text-red-800 border border-red-300 text-xs px-2 py-0.5 rounded">
-                        Flagged
-                      </span>
-                    )}
-                    {c.politically_exposed && (
-                      <span className="bg-amber-100 text-amber-800 border border-amber-300 text-xs px-2 py-0.5 rounded">
-                        PEP
-                      </span>
-                    )}
-                    <span className={RISK_STYLE[c.risk_level] ?? 'text-xs text-gray-500'}>
-                      {c.risk_level.charAt(0).toUpperCase() + c.risk_level.slice(1)}
-                    </span>
-                    <svg
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      className="w-3.5 h-3.5 text-gray-300"
+                  paginated.map(c => (
+                    <tr
+                      key={c.id}
+                      className={`border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${c.is_flagged ? 'bg-gray-50' : ''}`}
+                      onClick={() => router.push(`/miner/customers/${c.id}`)}
                     >
-                      <path d="M9 18l6-6-6-6" />
-                    </svg>
-                  </div>
-                </div>
-              ))
-            )}
+                      <td className="py-2.5 px-3 text-xs text-gray-800 font-medium truncate">{c.full_name}</td>
+                      <td className="py-2.5 px-3 text-xs text-gray-500">{c.national_id}</td>
+                      <td className="py-2.5 px-3">
+                        <span className={`inline-flex text-xs px-2 py-0.5 rounded capitalize ${RISK_BADGE[c.risk_level] ?? 'bg-gray-100 text-gray-600'}`}>
+                          {c.risk_level}
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-3 text-xs text-gray-700">{c.total_transactions}</td>
+                      <td className="py-2.5 px-3 text-xs text-gray-700">${fmtCurrency(c.total_value_usd)}</td>
+                      <td className="py-2.5 px-3 text-xs text-gray-600">
+                        {c.last_transaction ? new Date(c.last_transaction).toLocaleDateString() : '-'}
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <div className="flex gap-1">
+                          {c.is_flagged && <span className="bg-red-100 text-red-800 border border-red-300 text-xs px-2 py-0.5 rounded">Flagged</span>}
+                          {c.politically_exposed && <span className="bg-amber-100 text-amber-800 border border-amber-300 text-xs px-2 py-0.5 rounded">PEP</span>}
+                          {!c.is_flagged && !c.politically_exposed && <span className="text-gray-300 text-xs">-</span>}
+                        </div>
+                      </td>
+                      <td className="py-2.5 px-3">
+                        {(c.is_flagged || c.politically_exposed || c.risk_level === 'high') ? (
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); submitStr(c); }}
+                            disabled={strSubmittingId === c.id}
+                            className="text-xs px-2.5 py-1 rounded border border-red-300 bg-red-100 text-red-800 hover:bg-red-200 transition disabled:opacity-60"
+                          >
+                            {strSubmittingId === c.id ? 'Submitting...' : 'File STR'}
+                          </button>
+                        ) : (
+                          <span className="text-xs text-gray-400">-</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
+
+          {!loading && filtered.length > ITEMS_PER_PAGE && (
+            <div className="flex justify-between items-center px-5 py-3">
+              <div className="text-xs text-gray-400">
+                Showing {startIdx + 1}-{Math.min(startIdx + ITEMS_PER_PAGE, filtered.length)} of {filtered.length}
+              </div>
+              <div className="flex gap-1">
+                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                  let p = i + 1;
+                  if (totalPages > 7) {
+                    if (currentPage <= 4) p = i + 1;
+                    else if (currentPage >= totalPages - 3) p = totalPages - 6 + i;
+                    else p = currentPage - 3 + i;
+                  }
+                  return (
+                    <button
+                      key={p}
+                      onClick={() => setCurrentPage(p)}
+                      className={`w-7 h-7 text-xs rounded flex items-center justify-center ${
+                        p === currentPage ? 'bg-gray-900 text-white' : 'border border-gray-200 text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <div className="pb-4" />
         </div>
       </div>
     </div>

@@ -90,13 +90,18 @@ export default function MinerCustomerProfilePage({
   const [error, setError] = useState('');
   const [minerName, setMinerName] = useState('');
   const [minerKycStatus, setMinerKycStatus] = useState('');
+  const [minerRegNumber, setMinerRegNumber] = useState<string | null>(null);
+  const [submittingStr, setSubmittingStr] = useState(false);
+  const [strStatus, setStrStatus] = useState('');
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     const name = localStorage.getItem('minerName') ?? '';
     const kyc = localStorage.getItem('minerKycStatus') ?? '';
+    const reg = localStorage.getItem('minerRegNumber');
     setMinerName(name);
     setMinerKycStatus(kyc);
+    setMinerRegNumber(reg);
 
     if (token) {
       fetch('/api/auth/me', {
@@ -112,6 +117,10 @@ export default function MinerCustomerProfilePage({
           if (user?.miner_kyc_status) {
             setMinerKycStatus(user.miner_kyc_status);
             localStorage.setItem('minerKycStatus', user.miner_kyc_status);
+          }
+          if (user?.miner_reg_number) {
+            setMinerRegNumber(user.miner_reg_number);
+            localStorage.setItem('minerRegNumber', user.miner_reg_number);
           }
         })
         .catch(() => {});
@@ -178,6 +187,38 @@ export default function MinerCustomerProfilePage({
 
   const { customer } = profile;
 
+  const handleSubmitStr = async () => {
+    setStrStatus('');
+    setSubmittingStr(true);
+    const defaultReason =
+      customer.flag_reason ||
+      (customer.risk_level === 'high'
+        ? 'High-risk customer profile requires suspicious transaction review'
+        : 'Suspicious activity observed');
+    const reason = window.prompt('Enter STR reason (required):', defaultReason);
+    if (!reason || !reason.trim()) {
+      setSubmittingStr(false);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/customers/${customer.id}/str`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reason: reason.trim(),
+          filed_by: minerRegNumber ?? undefined,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.detail || 'Failed to submit STR');
+      setStrStatus(`STR submitted: ${data.str_reference ?? 'reference generated'}`);
+    } catch (err) {
+      setStrStatus(err instanceof Error ? err.message : 'Failed to submit STR');
+    } finally {
+      setSubmittingStr(false);
+    }
+  };
+
   return (
     <div className="flex h-screen">
       <Sidebar
@@ -219,6 +260,11 @@ export default function MinerCustomerProfilePage({
               {error}
             </div>
           )}
+          {strStatus && (
+            <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 text-xs text-gray-600">
+              {strStatus}
+            </div>
+          )}
 
           <div className="bg-white border border-gray-200 rounded-lg p-4">
             <div className="flex items-start justify-between gap-4">
@@ -230,6 +276,16 @@ export default function MinerCustomerProfilePage({
                 </div>
               </div>
               <div className="flex gap-2">
+                {(customer.is_flagged || customer.politically_exposed || customer.known_sanctions || customer.risk_level === 'high') && (
+                  <button
+                    type="button"
+                    onClick={handleSubmitStr}
+                    disabled={submittingStr}
+                    className="text-xs px-2 py-0.5 rounded border border-red-300 text-red-800 bg-red-100 disabled:opacity-60"
+                  >
+                    {submittingStr ? 'Submitting STR...' : 'File STR'}
+                  </button>
+                )}
                 <span
                   className={`text-xs capitalize px-2 py-0.5 rounded ${riskBadgeClass(customer.risk_level)}`}
                 >

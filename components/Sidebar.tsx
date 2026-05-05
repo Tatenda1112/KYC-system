@@ -59,14 +59,14 @@ export default function Sidebar({ role, activePage, userName, kycStatus }: Sideb
           { id: 'audit', label: 'Audit log', href: '/admin/audit' },
         ];
       case 'miner': {
-        const kycLocked = !!kycStatus && kycStatus !== 'Verified';
         return [
           { id: 'dashboard', label: 'Dashboard', href: '/miner/dashboard' },
           { id: 'registerkyc', label: 'KYC Profile', href: '/miner/register' },
-          { id: 'mycustomers', label: 'Customers', href: '/miner/customers', locked: kycLocked },
-          { id: 'recordsale', label: 'New Sale', href: '/miner/transactions/new', locked: kycLocked },
-          { id: 'mytransactions', label: 'Sales History', href: '/miner/transactions', locked: kycLocked },
-          { id: 'reports', label: 'Reports', href: '/miner/reports', locked: kycLocked },
+          { id: 'mycustomers', label: 'Customers', href: '/miner/customers' },
+          { id: 'str', label: 'STR Centre', href: '/miner/str' },
+          { id: 'recordsale', label: 'New Sale', href: '/miner/transactions/new' },
+          { id: 'mytransactions', label: 'Sales History', href: '/miner/transactions' },
+          { id: 'reports', label: 'Reports', href: '/miner/reports' },
           { id: 'changepassword', label: 'Account Security', href: '/change-password' },
         ];
       }

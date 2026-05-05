@@ -262,58 +262,6 @@ function DashboardContent() {
     return () => clearInterval(interval);
   }, [minerRegNumber, minerKycStatus, loading, fetchData]);
 
-  if (!loading && minerRegNumber && minerKycStatus && minerKycStatus !== 'Verified') {
-    const handleCheckStatus = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-        const res = await fetch('/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: 'no-store',
-        });
-        if (!res.ok) return;
-        const user = await res.json();
-        const status: string = user.miner_kyc_status;
-        if (status) {
-          setMinerKycStatus(status);
-          localStorage.setItem('minerKycStatus', status);
-          if (status === 'Verified' && minerRegNumber) {
-            fetchData(minerRegNumber);
-          }
-        }
-      } catch {}
-    };
-
-    return (
-      <div className="flex h-screen">
-        <Sidebar role="miner" activePage="mydashboard" userName={minerName || undefined} kycStatus={minerKycStatus || undefined} />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="h-12 bg-white border-b border-gray-100 flex items-center px-5">
-            <div className="text-sm font-medium text-gray-800">My dashboard</div>
-          </div>
-          <div className="flex-1 flex items-center justify-center bg-gray-50">
-            <div className="text-center max-w-sm">
-              <div className="text-sm font-medium text-gray-800 mb-2">Awaiting admin approval</div>
-              <div className="text-xs text-gray-400 leading-relaxed">
-                Your KYC status is currently{' '}
-                <span className="font-medium text-gray-600">{minerKycStatus}</span>. An
-                administrator must review and verify your documents before you can record
-                transactions and use reporting features.
-              </div>
-              <button
-                onClick={handleCheckStatus}
-                className="mt-5 text-xs bg-gray-900 text-white px-4 py-2 rounded-md hover:bg-gray-800 transition"
-              >
-                Check status now
-              </button>
-              <div className="text-xs text-gray-300 mt-2">Auto-checks every 15 seconds</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex h-screen">
       <Sidebar role="miner" activePage="mydashboard" userName={minerName || undefined} kycStatus={minerKycStatus || undefined} />

@@ -218,11 +218,14 @@ def list_customers_admin(
 def list_str_reports(
     status: str | None = None,
     search: str | None = None,
+    filed_by: str | None = None,
     db: Session = Depends(get_db),
 ) -> list[SuspiciousTransactionReport]:
     q = db.query(SuspiciousTransactionReport)
     if status:
         q = q.filter(SuspiciousTransactionReport.status == status)
+    if filed_by:
+        q = q.filter(SuspiciousTransactionReport.filed_by == filed_by)
     if search:
         term = f"%{search}%"
         q = q.filter(

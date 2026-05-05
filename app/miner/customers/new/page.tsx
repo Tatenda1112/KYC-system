@@ -281,28 +281,6 @@ export default function AddCustomerPage() {
   const fc = (field: string) =>
     `${inputBase} ${errors[field] ? 'border-gray-800' : 'border-gray-200'}`;
 
-  if (minerKycStatus && minerKycStatus !== 'Verified') {
-    return (
-      <div className="flex h-screen">
-        <Sidebar role="miner" activePage="mycustomers" kycStatus={minerKycStatus} userName={minerName || undefined} />
-        <div className="flex-1 flex flex-col overflow-hidden">
-          <div className="h-12 bg-white border-b border-gray-100 flex items-center px-5">
-            <div className="text-sm font-medium text-gray-800">Add new customer</div>
-          </div>
-          <div className="flex-1 flex items-center justify-center bg-gray-50">
-            <div className="text-center max-w-sm">
-              <div className="text-sm font-medium text-gray-800 mb-2">Entry locked</div>
-              <div className="text-xs text-gray-400 leading-relaxed">
-                Your KYC status is {minerKycStatus}. Customer management is available after an
-                administrator verifies your registration.
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex h-screen">
       <Sidebar role="miner" activePage="mycustomers" userName={minerName || undefined} />

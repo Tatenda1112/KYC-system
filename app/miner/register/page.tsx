@@ -1,390 +1,317 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Sidebar from '../../../components/Sidebar';
 
 const BACKEND = 'http://localhost:8000';
 
-interface FormData {
-  fullName: string;
-  nationalId: string;
+interface ExistingRegistration {
+  id: number;
+  full_name: string;
+  national_id: string;
   district: string;
-  districtOther?: string;
-  yearsOfOperation: string;
-  educationLevel: string;
-  registrationType: string;
-  miningRegistrationNumber: string;
+  years_of_operation: string;
+  education_level: string;
+  registration_type: string;
+  mining_reg_number: string;
+  owner_full_name: string;
+  owner_national_id: string;
+  owner_relationship: string;
+  owner_phone: string;
+  owner_email: string | null;
+  owner_address: string;
+  declaration_confirmed: boolean;
 }
 
-interface FormErrors {
-  [key: string]: string;
+interface DocState {
+  file: File | null;
+  fileName: string;
+  fileSize: string;
+  status: 'uploaded' | 'pending';
 }
 
-const PLACEHOLDER_VALUES = ['PENDING', 'Not provided', 'pending', 'not provided'];
-const isPlaceholder = (v: string | null | undefined) =>
-  !v || PLACEHOLDER_VALUES.includes(v.trim());
+function formatSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 
-const inputBase =
-  'h-9 w-full border rounded-md bg-gray-50 px-3 text-sm text-gray-800 focus:outline-none focus:border-gray-800';
-const readonlyBase =
-  'h-9 w-full border border-gray-100 rounded-md bg-gray-50 px-3 text-sm text-gray-500 cursor-not-allowed select-none';
-
-export default function MinerRegistrationStep1Page() {
-  const [formData, setFormData] = useState<FormData>({
-    fullName: '',
-    nationalId: '',
-    district: '',
-    districtOther: '',
-    yearsOfOperation: '',
-    educationLevel: '',
-    registrationType: '',
-    miningRegistrationNumber: '',
-  });
-  const [errors, setErrors] = useState<FormErrors>({});
-  // Fields locked because admin pre-filled them
-  const [lockedFields, setLockedFields] = useState<Set<string>>(new Set());
-  const [prefilled, setPrefilled] = useState(false);
+export default function MinerKycUploadOnlyPage() {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [registration, setRegistration] = useState<ExistingRegistration | null>(null);
 
-  // Load pre-filled data from admin-created registration on mount
+  const [docs, setDocs] = useState<Record<'nationalId' | 'certificate' | 'proofOfAddress', DocState>>({
+    nationalId: { file: null, fileName: '', fileSize: '', status: 'pending' },
+    certificate: { file: null, fileName: '', fileSize: '', status: 'pending' },
+    proofOfAddress: { file: null, fileName: '', fileSize: '', status: 'pending' },
+  });
+
+  const certRef = useRef<HTMLInputElement>(null);
+  const addressRef = useRef<HTMLInputElement>(null);
+  const nationalIdRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
+    const loadRegistration = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+          router.push('/login');
+          return;
+        }
 
-    fetch('/api/auth/me', {
-      headers: { Authorization: `Bearer ${token}` },
-      cache: 'no-store',
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(async user => {
-        if (!user?.miner_registration_id) return;
+        const meRes = await fetch('/api/auth/me', {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
+        if (!meRes.ok) throw new Error('Failed to load user');
+        const user = await meRes.json() as { miner_registration_id?: number };
 
-        const res = await fetch(
+        if (!user?.miner_registration_id) {
+          throw new Error('No miner registration profile found for this account.');
+        }
+
+        const regRes = await fetch(
           `${BACKEND}/miners/registrations/${user.miner_registration_id}`,
           { cache: 'no-store' },
         );
-        if (!res.ok) return;
-        const reg = await res.json();
-
-        const locked = new Set<string>();
-        const updates: Partial<FormData> = {};
-
-        // full_name: always pre-filled and locked (admin set it)
-        if (reg.full_name && !isPlaceholder(reg.full_name)) {
-          updates.fullName = reg.full_name;
-          locked.add('fullName');
-        }
-
-        // mining_reg_number: the unique identifier — always locked
-        if (reg.mining_reg_number && !isPlaceholder(reg.mining_reg_number)) {
-          updates.miningRegistrationNumber = reg.mining_reg_number;
-          locked.add('miningRegistrationNumber');
-        }
-
-        // district: pre-filled but miner can correct if needed
-        if (reg.district && !isPlaceholder(reg.district)) {
-          updates.district = reg.district;
-        }
-
-        // registration_type: pre-filled but miner can correct if needed
-        if (reg.registration_type && !isPlaceholder(reg.registration_type)) {
-          updates.registrationType = reg.registration_type;
-        }
-
-        // national_id, years_of_operation, education_level: admin left placeholders — miner fills these
-        if (!isPlaceholder(reg.national_id)) updates.nationalId = reg.national_id;
-        if (!isPlaceholder(reg.years_of_operation)) updates.yearsOfOperation = reg.years_of_operation;
-        if (!isPlaceholder(reg.education_level)) updates.educationLevel = reg.education_level;
-
-        if (Object.keys(updates).length > 0) {
-          setFormData(prev => ({ ...prev, ...updates }));
-          setLockedFields(locked);
-          setPrefilled(true);
-        }
-      })
-      .catch(() => {});
-  }, []);
-
-  const handleChange = (field: keyof FormData, value: string) => {
-    if (lockedFields.has(field)) return;
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) setErrors(prev => ({ ...prev, [field]: '' }));
-  };
-
-  const validate = (): boolean => {
-    const e: FormErrors = {};
-    if (!formData.fullName.trim()) e.fullName = 'This field is required';
-    if (!formData.nationalId.trim()) e.nationalId = 'This field is required';
-    if (!formData.district) e.district = 'This field is required';
-    if (formData.district === 'Other' && !formData.districtOther?.trim()) e.districtOther = 'Please specify district';
-    if (!formData.yearsOfOperation) e.yearsOfOperation = 'This field is required';
-    if (!formData.educationLevel) e.educationLevel = 'This field is required';
-    if (!formData.registrationType) e.registrationType = 'This field is required';
-    if (!formData.miningRegistrationNumber.trim())
-      e.miningRegistrationNumber = 'This field is required';
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  };
-
-  const handleNext = () => {
-    if (!validate()) return;
-    const payload = {
-      ...formData,
-      district: formData.district === 'Other' ? formData.districtOther?.trim() || '' : formData.district,
+        if (!regRes.ok) throw new Error('Failed to load existing registration profile.');
+        const reg = await regRes.json() as ExistingRegistration;
+        setRegistration(reg);
+      } catch (err) {
+        setSubmitError(err instanceof Error ? err.message : 'Failed to load registration profile.');
+      } finally {
+        setIsLoading(false);
+      }
     };
-    sessionStorage.setItem('minerRegistrationStep1', JSON.stringify(payload));
-    router.push('/miner/register/step2');
+
+    loadRegistration();
+  }, [router]);
+
+  const handleFileChange = (
+    key: 'nationalId' | 'certificate' | 'proofOfAddress',
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setDocs(prev => ({
+      ...prev,
+      [key]: { file, fileName: file.name, fileSize: formatSize(file.size), status: 'uploaded' },
+    }));
   };
 
-  const handleSaveDraft = () => {
-    sessionStorage.setItem('minerRegistrationDraft1', JSON.stringify(formData));
+  const removeDoc = (key: 'nationalId' | 'certificate' | 'proofOfAddress') => {
+    setDocs(prev => ({
+      ...prev,
+      [key]: { file: null, fileName: '', fileSize: '', status: 'pending' },
+    }));
   };
 
-  const fieldClass = (field: string) =>
-    lockedFields.has(field)
-      ? readonlyBase
-      : `${inputBase} ${errors[field] ? 'border-gray-800' : 'border-gray-200'}`;
+  const handleSubmit = async () => {
+    if (!registration) return;
+    setSubmitError('');
+    setIsSubmitting(true);
 
-  const selectClass = (field: string) =>
-    lockedFields.has(field)
-      ? `h-9 w-full border border-gray-100 rounded-md bg-gray-50 px-2 text-sm text-gray-500 cursor-not-allowed`
-      : `h-9 w-full border rounded-md bg-gray-50 px-2 text-sm text-gray-800 focus:outline-none focus:border-gray-800 ${
-          errors[field] ? 'border-gray-800' : 'border-gray-200'
-        }`;
+    const storedUser = localStorage.getItem('user');
+    const currentUser = storedUser ? JSON.parse(storedUser) as { email?: string } : null;
+
+    const payload = new FormData();
+    if (currentUser?.email) payload.append('account_email', currentUser.email);
+    payload.append('full_name', registration.full_name);
+    payload.append('national_id', registration.national_id);
+    payload.append('district', registration.district);
+    payload.append('years_of_operation', registration.years_of_operation);
+    payload.append('education_level', registration.education_level);
+    payload.append('registration_type', registration.registration_type);
+    payload.append('mining_reg_number', registration.mining_reg_number);
+    payload.append('owner_full_name', registration.owner_full_name);
+    payload.append('owner_national_id', registration.owner_national_id);
+    payload.append('owner_relationship', registration.owner_relationship);
+    payload.append('owner_phone', registration.owner_phone);
+    payload.append('owner_email', registration.owner_email ?? '');
+    payload.append('owner_address', registration.owner_address);
+    payload.append('declaration_confirmed', String(Boolean(registration.declaration_confirmed)));
+
+    if (docs.nationalId.file) payload.append('national_id_file', docs.nationalId.file);
+    if (docs.certificate.file) payload.append('registration_cert_file', docs.certificate.file);
+    if (docs.proofOfAddress.file) payload.append('proof_of_address_file', docs.proofOfAddress.file);
+
+    try {
+      const res = await fetch(`${BACKEND}/miners/register`, {
+        method: 'POST',
+        body: payload,
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as { detail?: string }).detail ?? 'Submission failed');
+      }
+
+      const registered = await res.json() as { reg_number: string; kyc_status?: string };
+      localStorage.setItem('minerRegNumber', registered.reg_number);
+      localStorage.setItem('minerName', registration.full_name ?? '');
+      localStorage.setItem('minerKycStatus', registered.kyc_status ?? 'Pending');
+      setShowSuccess(true);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Failed to submit. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const UploadArea = ({
+    docKey,
+    inputRef,
+  }: {
+    docKey: 'nationalId' | 'certificate' | 'proofOfAddress';
+    inputRef: React.RefObject<HTMLInputElement | null>;
+  }) => {
+    const doc = docs[docKey];
+
+    if (doc.status === 'uploaded') {
+      return (
+        <div className="border border-gray-200 rounded-lg p-3 bg-white flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-8 h-8 text-gray-300 flex-shrink-0">
+              <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <div>
+              <div className="text-xs text-gray-700 font-medium">{doc.fileName}</div>
+              <div className="text-xs text-gray-400 mt-0.5">{doc.fileSize} - Uploaded</div>
+            </div>
+          </div>
+          <button type="button" onClick={() => removeDoc(docKey)} className="text-xs text-gray-400 hover:text-gray-600 cursor-pointer">
+            Remove
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <div
+          onClick={() => inputRef.current?.click()}
+          className="border border-dashed border-gray-300 rounded-lg p-8 text-center bg-gray-50 cursor-pointer hover:bg-gray-100 transition"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-8 h-8 text-gray-300 mx-auto mb-2">
+            <path d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+          </svg>
+          <div className="text-xs text-gray-500">Click to upload or drag file here</div>
+          <div className="text-xs text-gray-400 mt-1">PDF, JPG or PNG - max 5MB</div>
+        </div>
+        <input
+          ref={inputRef}
+          type="file"
+          className="hidden"
+          accept=".pdf,.jpg,.jpeg,.png"
+          onChange={e => handleFileChange(docKey, e)}
+        />
+      </>
+    );
+  };
+
+  if (showSuccess) {
+    return (
+      <div className="flex h-screen">
+        <Sidebar role="miner" activePage="registerkyc" />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="h-12 bg-white border-b border-gray-100 flex items-center px-5">
+            <div className="text-sm font-medium text-gray-800">KYC registration</div>
+          </div>
+          <div className="flex-1 overflow-auto bg-gray-50 p-5">
+            <div className="w-full max-w-2xl mx-auto bg-white border border-gray-200 rounded-lg p-6">
+              <div className="text-center py-8">
+                <div className="text-gray-900 text-base font-medium mt-2">Documents submitted</div>
+                <div className="text-gray-400 text-xs mt-2 leading-relaxed max-w-xs mx-auto">
+                  Your KYC documents are now under review. You will be notified once verification is complete.
+                </div>
+                <button
+                  onClick={() => router.push('/miner/dashboard')}
+                  className="block bg-gray-900 text-white text-sm px-4 py-2 rounded-md hover:bg-gray-800 transition mt-8 w-full max-w-xs mx-auto"
+                >
+                  Go to my dashboard
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen">
       <Sidebar role="miner" activePage="registerkyc" />
-
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* TOPBAR */}
         <div className="h-12 bg-white border-b border-gray-100 flex items-center px-5">
           <div className="text-sm font-medium text-gray-800">KYC registration</div>
         </div>
 
-        {/* CONTENT */}
         <div className="flex-1 overflow-auto bg-gray-50 p-5">
           <div className="w-full max-w-2xl mx-auto bg-white border border-gray-200 rounded-lg p-6">
-
-            {/* CARD HEADER */}
             <div className="flex justify-between items-start mb-6">
               <div>
-                <div className="text-sm font-medium text-gray-900">
-                  Step 1 of 3 — Personal details
-                </div>
-                <div className="text-xs text-gray-400 mt-0.5">
-                  Basic information and mining registration
-                </div>
+                <div className="text-sm font-medium text-gray-900">Upload KYC documents</div>
+                <div className="text-xs text-gray-400 mt-0.5">Only document upload is required on this page</div>
               </div>
-              <div className="text-xs text-gray-300">33% complete</div>
+              <div className="text-xs text-gray-300">Single step</div>
             </div>
 
-            {/* STEP PROGRESS */}
-            <div className="flex items-start gap-0 mb-8">
-              {/* Step 1 — ACTIVE */}
-              <div className="flex flex-col items-center">
-                <div className="w-6 h-6 rounded-full bg-gray-900 text-white ring-2 ring-gray-200 ring-offset-2 flex items-center justify-center text-xs">
-                  1
-                </div>
-                <div className="text-xs text-gray-500 text-center mt-1">Details</div>
-              </div>
-              <div className="flex-1 h-px bg-gray-200 mt-3" />
-              {/* Step 2 — TODO */}
-              <div className="flex flex-col items-center">
-                <div className="w-6 h-6 rounded-full bg-gray-100 text-gray-400 border border-gray-200 flex items-center justify-center text-xs">
-                  2
-                </div>
-                <div className="text-xs text-gray-400 text-center mt-1">Ownership</div>
-              </div>
-              <div className="flex-1 h-px bg-gray-200 mt-3" />
-              {/* Step 3 — TODO */}
-              <div className="flex flex-col items-center">
-                <div className="w-6 h-6 rounded-full bg-gray-100 text-gray-400 border border-gray-200 flex items-center justify-center text-xs">
-                  3
-                </div>
-                <div className="text-xs text-gray-400 text-center mt-1">Documents</div>
-              </div>
-            </div>
+            {isLoading ? (
+              <div className="text-sm text-gray-400">Loading profile...</div>
+            ) : (
+              <>
+                <div className="space-y-5">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1.5">National ID (front and back)</div>
+                    <UploadArea docKey="nationalId" inputRef={nationalIdRef} />
+                  </div>
 
-            {/* FORM */}
-            <div className="space-y-4">
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1.5">Mining registration certificate</div>
+                    <UploadArea docKey="certificate" inputRef={certRef} />
+                  </div>
 
-              {prefilled && (
-                <div className="border-l-2 border-gray-300 bg-gray-50 pl-3 py-2.5 rounded-r">
-                  <div className="text-xs font-medium text-gray-600 mb-0.5">Some fields pre-filled by admin</div>
-                  <div className="text-xs text-gray-400 leading-relaxed">
-                    Greyed fields were set when your account was created and cannot be changed. Complete the remaining fields below.
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1.5">Proof of address (utility bill or bank statement)</div>
+                    <UploadArea docKey="proofOfAddress" inputRef={addressRef} />
                   </div>
                 </div>
-              )}
 
-              {/* Row 1 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">
-                    Full name
-                    {lockedFields.has('fullName') && <span className="ml-1 text-gray-300">(pre-filled)</span>}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.fullName}
-                    onChange={e => handleChange('fullName', e.target.value)}
-                    readOnly={lockedFields.has('fullName')}
-                    className={fieldClass('fullName')}
-                    placeholder="Enter full name"
-                  />
-                  {errors.fullName && (
-                    <div className="text-xs text-gray-500 mt-1">{errors.fullName}</div>
-                  )}
+                <div className="border-l-2 border-gray-300 bg-gray-50 pl-3 py-2 rounded-r mt-5">
+                  <div className="text-xs text-gray-500 leading-relaxed">
+                    Your documents will be reviewed by a compliance officer. Only verified miners can use transaction and reporting features.
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">National ID number</label>
-                  <input
-                    type="text"
-                    value={formData.nationalId}
-                    onChange={e => handleChange('nationalId', e.target.value)}
-                    className={fieldClass('nationalId')}
-                    placeholder="e.g. 63-123456A78"
-                  />
-                  {errors.nationalId && (
-                    <div className="text-xs text-gray-500 mt-1">{errors.nationalId}</div>
-                  )}
-                </div>
-              </div>
 
-              {/* Row 2 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">District of operation</label>
-                  <select
-                    value={formData.district}
-                    onChange={e => handleChange('district', e.target.value)}
-                    disabled={lockedFields.has('district')}
-                    className={selectClass('district')}
-                  >
-                    <option value="">Select district...</option>
-                    <option value="Kadoma">Kadoma</option>
-                    <option value="Ngezi">Ngezi</option>
-                    <option value="Shurugwi">Shurugwi</option>
-                    <option value="Zvishavane">Zvishavane</option>
-                    <option value="Gwanda">Gwanda</option>
-                    <option value="Other">Other</option>
-                  </select>
-                  {formData.district === 'Other' && (
-                    <input
-                      type="text"
-                      value={formData.districtOther || ''}
-                      onChange={e => handleChange('districtOther' as keyof FormData, e.target.value)}
-                      className={`${inputBase} border-gray-200 mt-2`}
-                      placeholder="Specify district"
-                    />
-                  )}
-                  {errors.district && (
-                    <div className="text-xs text-gray-500 mt-1">{errors.district}</div>
-                  )}
-                  {errors.districtOther && (
-                    <div className="text-xs text-gray-500 mt-1">{errors.districtOther}</div>
-                  )}
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Years of operation</label>
-                  <select
-                    value={formData.yearsOfOperation}
-                    onChange={e => handleChange('yearsOfOperation', e.target.value)}
-                    className={selectClass('yearsOfOperation')}
-                  >
-                    <option value="">Select...</option>
-                    <option value="1-2">1 to 2 years</option>
-                    <option value="3-5">3 to 5 years</option>
-                    <option value="6-10">6 to 10 years</option>
-                    <option value="10+">Above 10 years</option>
-                  </select>
-                  {errors.yearsOfOperation && (
-                    <div className="text-xs text-gray-500 mt-1">{errors.yearsOfOperation}</div>
-                  )}
-                </div>
-              </div>
-
-              {/* Row 3 */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Education level</label>
-                  <select
-                    value={formData.educationLevel}
-                    onChange={e => handleChange('educationLevel', e.target.value)}
-                    className={selectClass('educationLevel')}
-                  >
-                    <option value="">Select...</option>
-                    <option value="Primary">Primary</option>
-                    <option value="Secondary">Secondary</option>
-                    <option value="Diploma">Diploma or Certificate</option>
-                    <option value="Degree">Degree and above</option>
-                  </select>
-                  {errors.educationLevel && (
-                    <div className="text-xs text-gray-500 mt-1">{errors.educationLevel}</div>
-                  )}
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Registration type</label>
-                  <select
-                    value={formData.registrationType}
-                    onChange={e => handleChange('registrationType', e.target.value)}
-                    disabled={lockedFields.has('registrationType')}
-                    className={selectClass('registrationType')}
-                  >
-                    <option value="">Select...</option>
-                    <option value="Cooperative">Cooperative</option>
-                    <option value="Individual Licence">Individual Licence</option>
-                    <option value="Company">Company</option>
-                    <option value="Syndicate">Syndicate</option>
-                  </select>
-                  {errors.registrationType && (
-                    <div className="text-xs text-gray-500 mt-1">{errors.registrationType}</div>
-                  )}
-                </div>
-              </div>
-
-              {/* Full width */}
-              <div>
-                <label className="text-xs text-gray-500 mb-1 block">
-                  Mining registration number
-                  {lockedFields.has('miningRegistrationNumber') && <span className="ml-1 text-gray-300">(pre-filled)</span>}
-                </label>
-                <input
-                  type="text"
-                  value={formData.miningRegistrationNumber}
-                  onChange={e => handleChange('miningRegistrationNumber', e.target.value)}
-                  readOnly={lockedFields.has('miningRegistrationNumber')}
-                  className={fieldClass('miningRegistrationNumber')}
-                  placeholder="e.g. COOP-SHU-2021-0042"
-                />
-                {errors.miningRegistrationNumber && (
-                  <div className="text-xs text-gray-500 mt-1">
-                    {errors.miningRegistrationNumber}
+                {submitError && (
+                  <div className="mt-3 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded p-3">
+                    {submitError}
                   </div>
                 )}
-              </div>
 
-              {/* BUTTONS */}
-              <div className="flex gap-3 mt-6">
-                <button
-                  type="button"
-                  onClick={handleSaveDraft}
-                  className="flex-1 bg-white border border-gray-200 text-gray-600 text-sm px-4 py-2 rounded-md hover:bg-gray-50 transition"
-                >
-                  Save draft
-                </button>
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="flex-[2] bg-gray-900 text-white text-sm px-4 py-2 rounded-md hover:bg-gray-800 transition"
-                >
-                  Next — beneficial owner
-                </button>
-              </div>
-
-            </div>
+                <div className="flex gap-3 mt-6">
+                  <button
+                    type="button"
+                    onClick={() => router.push('/miner/dashboard')}
+                    className="flex-1 bg-white border border-gray-200 text-gray-600 text-sm px-4 py-2 rounded-md hover:bg-gray-50 transition"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={isSubmitting || !registration}
+                    className="flex-[2] bg-gray-900 text-white text-sm px-4 py-2 rounded-md hover:bg-gray-800 transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? 'Submitting...' : 'Submit KYC documents'}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>

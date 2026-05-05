@@ -88,8 +88,6 @@ export default function AdminCustomerProfilePage({
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [strStatus, setStrStatus] = useState('');
-  const [submittingStr, setSubmittingStr] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -151,27 +149,6 @@ export default function AdminCustomerProfilePage({
 
   const { customer } = profile;
 
-  const handleSubmitStr = async () => {
-    setStrStatus('');
-    setSubmittingStr(true);
-    try {
-      const res = await fetch(`/api/customers/${customer.id}/str`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reason: customer.flag_reason || 'High-risk customer profile requiring STR review',
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.detail || 'Failed to submit STR');
-      setStrStatus(`STR submitted: ${data.str_reference ?? 'reference generated'}`);
-    } catch (err) {
-      setStrStatus(err instanceof Error ? err.message : 'Failed to submit STR');
-    } finally {
-      setSubmittingStr(false);
-    }
-  };
-
   return (
     <div className="flex h-screen">
       <Sidebar role="admin" activePage="customers" />
@@ -204,12 +181,6 @@ export default function AdminCustomerProfilePage({
               {error}
             </div>
           )}
-          {strStatus && (
-            <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 text-xs text-gray-600">
-              {strStatus}
-            </div>
-          )}
-
           <div className="bg-white border border-gray-200 rounded-lg p-4">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -237,16 +208,6 @@ export default function AdminCustomerProfilePage({
                   <span className="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800 border border-amber-300">
                     PEP
                   </span>
-                )}
-                {(customer.is_flagged || customer.politically_exposed || customer.known_sanctions) && (
-                  <button
-                    type="button"
-                    onClick={handleSubmitStr}
-                    disabled={submittingStr}
-                    className="text-xs px-2 py-0.5 rounded border border-red-300 text-red-800 bg-red-100 disabled:opacity-60"
-                  >
-                    {submittingStr ? 'Submitting STR...' : 'File STR'}
-                  </button>
                 )}
               </div>
             </div>

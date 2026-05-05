@@ -43,8 +43,6 @@ export default function AdminCustomersPage() {
   const [flaggedOnly, setFlaggedOnly] = useState(false);
   const [pepOnly, setPepOnly] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const [strSubmittingId, setStrSubmittingId] = useState<number | null>(null);
-  const [strMessage, setStrMessage] = useState('');
   const [deleteLoadingId, setDeleteLoadingId] = useState<number | null>(null);
 
   const fetchCustomers = useCallback(async () => {
@@ -93,30 +91,6 @@ export default function AdminCustomersPage() {
   }).length;
   const flaggedCount = customers.filter(c => c.is_flagged).length;
   const pepCount = customers.filter(c => c.politically_exposed).length;
-
-  const submitStr = async (customer: CustomerRow) => {
-    setStrMessage('');
-    setStrSubmittingId(customer.id);
-    try {
-      const res = await fetch(`/api/customers/${customer.id}/str`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reason:
-            customer.risk_level === 'high'
-              ? 'High-risk customer profile requires suspicious transaction review'
-              : 'Customer flagged for suspicious activity review',
-        }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.detail || 'Failed to submit STR');
-      setStrMessage(`STR submitted for ${customer.full_name}: ${data.str_reference ?? 'reference generated'}`);
-    } catch (err) {
-      setStrMessage(err instanceof Error ? err.message : 'Failed to submit STR');
-    } finally {
-      setStrSubmittingId(null);
-    }
-  };
 
   const deleteCustomer = async (customer: CustomerRow) => {
     const confirmedName = window.prompt(
@@ -169,14 +143,6 @@ export default function AdminCustomersPage() {
               </div>
             </div>
           )}
-          {strMessage && (
-            <div className="px-5 pt-4">
-              <div className="border-l-2 border-gray-400 bg-white rounded-r px-3 py-2">
-                <div className="text-xs text-gray-600">{strMessage}</div>
-              </div>
-            </div>
-          )}
-
           {/* STAT CARDS */}
           <div className="grid grid-cols-4 gap-3 px-5 pt-4 pb-3">
             <div className="bg-white border border-gray-200 rounded-lg p-4">
@@ -265,7 +231,6 @@ export default function AdminCustomersPage() {
                   <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[8%]">Trans.</th>
                   <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[12%]">Total value</th>
                   <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[12%]">Flag / PEP</th>
-                  <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[8%]">STR</th>
                   <th className="text-xs text-slate-700 uppercase tracking-wider font-semibold py-2.5 px-3 text-left w-[8%]">Action</th>
                 </tr>
               </thead>
@@ -273,7 +238,7 @@ export default function AdminCustomersPage() {
                 {loading ? (
                   Array.from({ length: 6 }).map((_, i) => (
                     <tr key={i} className="border-b border-gray-100">
-                      {Array.from({ length: 10 }).map((__, j) => (
+                      {Array.from({ length: 9 }).map((__, j) => (
                         <td key={j} className="py-2.5 px-3">
                           <div className="h-3 bg-gray-100 rounded animate-pulse" />
                         </td>
@@ -282,7 +247,7 @@ export default function AdminCustomersPage() {
                   ))
                 ) : paginated.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="py-10 text-center text-xs text-gray-400">
+                    <td colSpan={9} className="py-10 text-center text-xs text-gray-400">
                       {customers.length === 0
                         ? 'No customers registered yet.'
                         : 'No customers match the filters.'}
@@ -330,20 +295,6 @@ export default function AdminCustomersPage() {
                             <span className="text-gray-300 text-xs">—</span>
                           )}
                         </div>
-                      </td>
-                      <td className="py-2.5 px-3">
-                        {(c.is_flagged || c.politically_exposed || c.risk_level === 'high') ? (
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); submitStr(c); }}
-                            disabled={strSubmittingId === c.id}
-                            className="text-xs px-2.5 py-1 rounded border border-red-300 bg-red-100 text-red-800 hover:bg-red-200 transition disabled:opacity-60"
-                          >
-                            {strSubmittingId === c.id ? 'Submitting...' : 'File STR'}
-                          </button>
-                        ) : (
-                          <span className="text-xs text-gray-400">-</span>
-                        )}
                       </td>
                       <td className="py-2.5 px-3">
                         <button
