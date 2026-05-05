@@ -12,6 +12,20 @@ from app.models import GoldTransaction, MinerRegistration
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
+def _ensure_verified_miner(db: Session, miner_reg_number: str) -> None:
+    miner = (
+        db.query(MinerRegistration)
+        .filter(MinerRegistration.reg_number == miner_reg_number)
+        .first()
+    )
+    if not miner:
+        raise HTTPException(status_code=404, detail="Miner not found")
+    if miner.kyc_status != "Verified":
+        raise HTTPException(
+            status_code=403,
+            detail="Miner profile is locked until admin approval (KYC must be Verified).",
+        )
+
 
 @router.get("/summary")
 def reports_summary(db: Session = Depends(get_db)):
@@ -56,6 +70,7 @@ def export_transactions(
     """Stream a CSV export of transactions, optionally filtered to one miner."""
     q = db.query(GoldTransaction)
     if miner_reg_number:
+        _ensure_verified_miner(db, miner_reg_number)
         q = q.filter(GoldTransaction.miner_reg_number == miner_reg_number)
     txns = q.order_by(GoldTransaction.transaction_date.desc()).all()
 
@@ -138,6 +153,7 @@ def miner_report_data(reg_number: str, db: Session = Depends(get_db)):
     )
     if not miner:
         raise HTTPException(status_code=404, detail="Miner not found")
+    _ensure_verified_miner(db, reg_number)
 
     txns = (
         db.query(GoldTransaction)

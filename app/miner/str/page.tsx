@@ -31,6 +31,8 @@ export default function MinerStrPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [minerName, setMinerName] = useState('');
+  const [minerRegNumber, setMinerRegNumber] = useState<string | null>(null);
+  const [minerKycStatus, setMinerKycStatus] = useState('');
 
   useEffect(() => {
     const load = async () => {
@@ -39,6 +41,9 @@ export default function MinerStrPage() {
       try {
         const reg = localStorage.getItem('minerRegNumber');
         const name = localStorage.getItem('minerName') ?? '';
+        const status = localStorage.getItem('minerKycStatus') ?? '';
+        setMinerRegNumber(reg);
+        setMinerKycStatus(status);
         setMinerName(name);
         if (!reg) {
           setReports([]);
@@ -54,6 +59,14 @@ export default function MinerStrPage() {
           if (me?.full_name) {
             setMinerName(me.full_name);
             localStorage.setItem('minerName', me.full_name);
+          }
+          if (me?.miner_reg_number) {
+            setMinerRegNumber(me.miner_reg_number);
+            localStorage.setItem('minerRegNumber', me.miner_reg_number);
+          }
+          if (me?.miner_kyc_status) {
+            setMinerKycStatus(me.miner_kyc_status);
+            localStorage.setItem('minerKycStatus', me.miner_kyc_status);
           }
         }
 
@@ -72,9 +85,23 @@ export default function MinerStrPage() {
     load();
   }, []);
 
+  if (!loading && minerRegNumber && minerKycStatus && minerKycStatus !== 'Verified') {
+    return (
+      <div className="flex h-screen">
+        <Sidebar role="miner" activePage="str" userName={minerName || undefined} kycStatus={minerKycStatus || undefined} />
+        <div className="flex-1 flex items-center justify-center bg-gray-50">
+          <div className="max-w-md bg-white border border-gray-200 rounded-lg p-5">
+            <div className="text-sm font-medium text-gray-800 mb-2">Profile locked pending admin approval</div>
+            <div className="text-xs text-gray-500">Only admin-approved miners can access STR sections.</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen">
-      <Sidebar role="miner" activePage="str" userName={minerName || undefined} />
+      <Sidebar role="miner" activePage="str" userName={minerName || undefined} kycStatus={minerKycStatus || undefined} />
       <div className="flex-1 flex flex-col overflow-hidden">
         <div className="h-12 bg-white border-b border-gray-100 flex items-center px-5">
           <div className="text-sm font-medium text-gray-800">STR Centre</div>

@@ -193,6 +193,38 @@ function DashboardContent() {
     }
   }, [transactionSuccess]);
 
+  // Poll /auth/me every 15 s while awaiting approval — this is the most reliable
+  // source of truth since it reads the user's linked MinerRegistration directly.
+  useEffect(() => {
+    if (minerKycStatus === 'Verified' || loading) return;
+    if (!minerRegNumber) return;
+
+    const checkApproval = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        const res = await fetch('/api/auth/me', {
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store',
+        });
+        if (!res.ok) return;
+        const user = await res.json();
+        const status: string | null = user.miner_kyc_status ?? null;
+        if (status && status !== minerKycStatus) {
+          setMinerKycStatus(status);
+          localStorage.setItem('minerKycStatus', status);
+          if (status === 'Verified' && minerRegNumber) {
+            fetchData(minerRegNumber);
+          }
+        }
+      } catch {}
+    };
+
+    checkApproval();
+    const interval = setInterval(checkApproval, 15_000);
+    return () => clearInterval(interval);
+  }, [minerRegNumber, minerKycStatus, loading, fetchData]);
+
   const recent5 = transactions.slice(0, 5);
   const totalValue = transactions.reduce((s, t) => s + t.sale_amount_usd, 0);
 
@@ -250,38 +282,6 @@ function DashboardContent() {
       </div>
     );
   }
-
-  // Poll /auth/me every 15 s while awaiting approval — this is the most reliable
-  // source of truth since it reads the user's linked MinerRegistration directly.
-  useEffect(() => {
-    if (minerKycStatus === 'Verified' || loading) return;
-    if (!minerRegNumber) return;
-
-    const checkApproval = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-        const res = await fetch('/api/auth/me', {
-          headers: { Authorization: `Bearer ${token}` },
-          cache: 'no-store',
-        });
-        if (!res.ok) return;
-        const user = await res.json();
-        const status: string | null = user.miner_kyc_status ?? null;
-        if (status && status !== minerKycStatus) {
-          setMinerKycStatus(status);
-          localStorage.setItem('minerKycStatus', status);
-          if (status === 'Verified' && minerRegNumber) {
-            fetchData(minerRegNumber);
-          }
-        }
-      } catch {}
-    };
-
-    checkApproval();
-    const interval = setInterval(checkApproval, 15_000);
-    return () => clearInterval(interval);
-  }, [minerRegNumber, minerKycStatus, loading, fetchData]);
 
   return (
     <div className="flex h-screen">

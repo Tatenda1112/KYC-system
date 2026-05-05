@@ -20,6 +20,20 @@ from app.schemas import (
 
 router = APIRouter(prefix="/customers", tags=["customers"])
 
+def _ensure_verified_miner(db: Session, miner_reg_number: str) -> None:
+    miner = (
+        db.query(MinerRegistration)
+        .filter(MinerRegistration.reg_number == miner_reg_number)
+        .first()
+    )
+    if not miner:
+        raise HTTPException(status_code=404, detail="Miner registration not found")
+    if miner.kyc_status != "Verified":
+        raise HTTPException(
+            status_code=403,
+            detail="Miner profile is locked until admin approval (KYC must be Verified).",
+        )
+
 
 def _assess_risk(payload: CustomerCreate | CustomerUpdate | Customer) -> tuple[str, bool, str | None]:
     """Return (risk_level, is_flagged, flag_reason) based on customer profile."""
@@ -334,6 +348,10 @@ def create_customer(
     payload: CustomerCreate,
     db: Session = Depends(get_db),
 ) -> Customer:
+    if not payload.miner_reg_number:
+        raise HTTPException(status_code=400, detail="miner_reg_number is required")
+    _ensure_verified_miner(db, payload.miner_reg_number)
+
     existing = (
         db.query(Customer)
         .filter(Customer.national_id == payload.national_id)
@@ -375,6 +393,9 @@ def submit_str(
     customer = db.get(Customer, customer_id)
     if not customer:
         raise HTTPException(status_code=404, detail="Customer not found")
+    if not customer.miner_reg_number:
+        raise HTTPException(status_code=400, detail="Customer is not linked to a miner")
+    _ensure_verified_miner(db, customer.miner_reg_number)
 
     reason = (payload or {}).get("reason") or customer.flag_reason or "Suspicious activity observed"
     note = (payload or {}).get("note")
@@ -418,6 +439,8 @@ def list_customers(
     search: str | None = None,
     db: Session = Depends(get_db),
 ) -> list[Customer]:
+    if miner_reg_number:
+        _ensure_verified_miner(db, miner_reg_number)
     q = db.query(Customer)
     if miner_reg_number:
         q = q.filter(Customer.miner_reg_number == miner_reg_number)

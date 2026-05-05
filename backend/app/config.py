@@ -19,8 +19,8 @@ class Settings(BaseSettings):
     jwt_secret_key: str = "change-jwt-secret-in-production"
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 480
-    default_admin_email: str = "tatendatatenda1112@gmail.com"
-    default_admin_password: str = "Tatendamukono1112@"
+    default_admin_email: str = "nyashaadmin1112@gmail.com"
+    default_admin_password: str = "Nyashamukono1112@"
     default_admin_name: str = "Nyasha"
 
 

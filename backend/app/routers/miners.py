@@ -11,8 +11,8 @@ from sqlalchemy.orm import Session
 from app.audit_utils import log_event
 from app.config import settings
 from app.database import get_db
-from app.deps import verify_researcher_token
-from app.models import AuditLog, GoldTransaction, Miner, MinerRegistration
+from app.deps import get_current_user, verify_researcher_token
+from app.models import AuditLog, GoldTransaction, Miner, MinerRegistration, User
 from app.schemas import KycStatusUpdate, MinerCreate, MinerOut, MinerRegistrationCreate, MinerRegistrationOut
 
 router = APIRouter(prefix="/miners", tags=["miners"])
@@ -217,7 +217,10 @@ def update_registration_status(
     reg_id: int,
     payload: KycStatusUpdate,
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ) -> MinerRegistration:
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin access required")
     reg = db.get(MinerRegistration, reg_id)
     if not reg:
         raise HTTPException(status_code=404, detail="Registration not found")

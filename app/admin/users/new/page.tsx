@@ -9,7 +9,7 @@ const BACKEND = 'http://localhost:8000';
 interface FormData {
   fullName: string;
   email: string;
-  role: 'miner' | 'compliance_officer' | 'admin' | '';
+  role: 'miner' | 'compliance_officer' | '';
   district: string;
   registrationNumber: string;
   registrationType: string;
@@ -405,7 +405,6 @@ export default function CreateUserPage() {
                     <option value="">Select role...</option>
                     <option value="miner">Miner</option>
                     <option value="compliance_officer">Compliance Officer</option>
-                    <option value="admin">Admin</option>
                   </select>
                   {errors.role && (
                     <p className="text-red-500 text-xs mt-1">{errors.role}</p>

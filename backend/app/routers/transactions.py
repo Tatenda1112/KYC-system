@@ -11,6 +11,20 @@ from app.schemas import GoldTransactionCreate, GoldTransactionOut, TransactionSt
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
+def _ensure_verified_miner(db: Session, miner_reg_number: str) -> None:
+    miner = (
+        db.query(MinerRegistration)
+        .filter(MinerRegistration.reg_number == miner_reg_number)
+        .first()
+    )
+    if not miner:
+        raise HTTPException(status_code=404, detail="Miner registration not found")
+    if miner.kyc_status != "Verified":
+        raise HTTPException(
+            status_code=403,
+            detail="Miner profile is locked until admin approval (KYC must be Verified).",
+        )
+
 
 def _compute_flags(payload: GoldTransactionCreate) -> tuple[bool, str | None]:
     """Return (is_flagged, flag_reason) based on AML/CDD rules."""
@@ -29,6 +43,9 @@ def create_transaction(
     payload: GoldTransactionCreate,
     db: Session = Depends(get_db),
 ) -> GoldTransaction:
+    if payload.miner_reg_number:
+        _ensure_verified_miner(db, payload.miner_reg_number)
+
     is_flagged, flag_reason = _compute_flags(payload)
     txn = GoldTransaction(
         **payload.model_dump(),
@@ -109,6 +126,8 @@ def list_transactions(
     miner_reg_number: str | None = None,
     db: Session = Depends(get_db),
 ) -> list[GoldTransaction]:
+    if miner_reg_number:
+        _ensure_verified_miner(db, miner_reg_number)
     q = db.query(GoldTransaction)
     if payment_method:
         q = q.filter(GoldTransaction.payment_method == payment_method)

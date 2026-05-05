@@ -72,9 +72,9 @@ def create_user(
         raise HTTPException(status_code=409, detail=f"Email '{request.email}' is already registered")
     
     # Validate role
-    valid_roles = ["miner", "compliance_officer", "admin"]
+    valid_roles = ["miner", "compliance_officer"]
     if request.role not in valid_roles:
-        raise HTTPException(status_code=400, detail="Invalid role")
+        raise HTTPException(status_code=400, detail="Invalid role. Only miner and compliance_officer are allowed here.")
     
     # Generate temporary password
     temp_password = generate_temp_password()

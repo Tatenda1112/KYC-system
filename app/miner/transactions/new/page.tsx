@@ -211,6 +211,20 @@ export default function RecordGoldSalePage() {
     { label: 'Mobile money', value: 'mobile' },
   ];
 
+  if (minerRegNumber && minerKycStatus && minerKycStatus !== 'Verified') {
+    return (
+      <div className="flex h-screen">
+        <Sidebar role="miner" activePage="recordsale" kycStatus={minerKycStatus || undefined} />
+        <div className="flex-1 flex items-center justify-center bg-gray-50">
+          <div className="max-w-md bg-white border border-gray-200 rounded-lg p-5">
+            <div className="text-sm font-medium text-gray-800 mb-2">Profile locked pending admin approval</div>
+            <div className="text-xs text-gray-500">Only admin-approved miners can record new sales.</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const CddToggle = ({
     value,
     onChange,
@@ -263,7 +277,7 @@ export default function RecordGoldSalePage() {
 
   return (
     <div className="flex h-screen">
-      <Sidebar role="miner" activePage="recordsale" />
+      <Sidebar role="miner" activePage="recordsale" kycStatus={minerKycStatus || undefined} />
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* TOPBAR */}
@@ -579,7 +593,7 @@ export default function RecordGoldSalePage() {
                 {/* Dynamic: cash warning */}
                 {showCashWarning && (
                   <WarningCard title="Cash transaction rule">
-                    Cash transactions above USD 500 are automatically flagged for compliance
+                    Cash transactions above USD 5000 are automatically flagged for compliance
                     review under AML regulations.
                   </WarningCard>
                 )}
