@@ -4,15 +4,15 @@ const BACKEND = 'http://localhost:8000';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
-  const nationalId = searchParams.get('national_id');
+  const query = searchParams.get('query');
   const minerRegNumber = searchParams.get('miner_reg_number');
 
-  if (!nationalId) {
-    return NextResponse.json({ detail: 'national_id is required' }, { status: 400 });
+  if (!query) {
+    return NextResponse.json({ detail: 'query is required' }, { status: 400 });
   }
 
   try {
-    const params = new URLSearchParams({ national_id: nationalId });
+    const params = new URLSearchParams({ query });
     if (minerRegNumber) params.set('miner_reg_number', minerRegNumber);
 
     const res = await fetch(`${BACKEND}/customers/check?${params}`, { cache: 'no-store' });

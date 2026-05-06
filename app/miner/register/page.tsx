@@ -257,7 +257,6 @@ export default function MinerKycUploadOnlyPage() {
                 <div className="text-sm font-medium text-gray-900">Upload KYC documents</div>
                 <div className="text-xs text-gray-400 mt-0.5">Only document upload is required on this page</div>
               </div>
-              <div className="text-xs text-gray-300">Single step</div>
             </div>
 
             {isLoading ? (

@@ -146,14 +146,28 @@ def _validate_customer_compliance(payload: CustomerCreate | CustomerUpdate | Cus
 
 @router.get("/check", response_model=CustomerOut | None)
 def check_customer(
-    national_id: str = Query(..., description="National ID to look up"),
+    query: str = Query(..., min_length=1, description="Customer name or national ID to look up"),
     miner_reg_number: str | None = Query(None),
     db: Session = Depends(get_db),
 ) -> Customer | None:
-    q = db.query(Customer).filter(Customer.national_id == national_id)
+    normalized = query.strip()
+    if not normalized:
+        return None
+
+    # Prefer exact national ID match first.
+    by_id = db.query(Customer).filter(Customer.national_id == normalized)
     if miner_reg_number:
-        q = q.filter(Customer.miner_reg_number == miner_reg_number)
-    return q.first()
+        by_id = by_id.filter(Customer.miner_reg_number == miner_reg_number)
+    found = by_id.first()
+    if found:
+        return found
+
+    # Fallback to customer name search (case-insensitive partial match).
+    term = f"%{normalized}%"
+    by_name = db.query(Customer).filter(Customer.full_name.ilike(term))
+    if miner_reg_number:
+        by_name = by_name.filter(Customer.miner_reg_number == miner_reg_number)
+    return by_name.order_by(Customer.created_at.desc()).first()
 
 
 @router.get("/admin", response_model=list[CustomerAdminRow])

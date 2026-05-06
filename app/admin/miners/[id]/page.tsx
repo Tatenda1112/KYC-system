@@ -105,18 +105,29 @@ export default function MinerProfilePage({ params }: { params: Promise<{ id: str
 
     setUpdating(true);
     try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
       const res = await fetch(
         `${BACKEND}/miners/registrations/${miner.id}/status`,
         {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
           body: JSON.stringify({
             kyc_status: newStatus,
             score: newScore ? parseInt(newScore, 10) : undefined,
           }),
         },
       );
-      if (!res.ok) throw new Error('Update failed');
+      if (!res.ok) {
+        const apiError = await res.text();
+        throw new Error(apiError || 'Update failed');
+      }
       const updated: MinerRegistrationOut = await res.json();
       setMiner(updated);
       setShowModal(false);

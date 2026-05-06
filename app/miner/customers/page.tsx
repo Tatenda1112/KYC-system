@@ -20,6 +20,8 @@ interface CustomerRow {
   created_at: string;
 }
 
+const HIGH_VALUE_THRESHOLD_USD = 5000;
+
 function fmtCurrency(v: number) {
   return v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -306,11 +308,16 @@ export default function MinerCustomersPage() {
                         <div className="flex gap-1">
                           {c.is_flagged && <span className="bg-red-100 text-red-800 border border-red-300 text-xs px-2 py-0.5 rounded">Flagged</span>}
                           {c.politically_exposed && <span className="bg-amber-100 text-amber-800 border border-amber-300 text-xs px-2 py-0.5 rounded">PEP</span>}
+                          {c.total_value_usd > HIGH_VALUE_THRESHOLD_USD && (
+                            <span className="bg-gray-100 text-gray-700 border border-gray-300 text-xs px-2 py-0.5 rounded">
+                              High value
+                            </span>
+                          )}
                           {!c.is_flagged && !c.politically_exposed && <span className="text-gray-300 text-xs">-</span>}
                         </div>
                       </td>
                       <td className="py-2.5 px-3">
-                        {(c.is_flagged || c.politically_exposed || c.risk_level === 'high') ? (
+                        {(c.is_flagged || c.politically_exposed || c.risk_level === 'high' || c.total_value_usd > HIGH_VALUE_THRESHOLD_USD) ? (
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); submitStr(c); }}

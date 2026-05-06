@@ -78,6 +78,8 @@ function riskBadgeClass(risk: string) {
   return 'bg-gray-100 text-gray-600';
 }
 
+const HIGH_VALUE_THRESHOLD_USD = 5000;
+
 export default function MinerCustomerProfilePage({
   params,
 }: {
@@ -94,6 +96,14 @@ export default function MinerCustomerProfilePage({
   const [minerRegNumber, setMinerRegNumber] = useState<string | null>(null);
   const [submittingStr, setSubmittingStr] = useState(false);
   const [strStatus, setStrStatus] = useState('');
+  const [reviewSaving, setReviewSaving] = useState(false);
+  const [reviewStatus, setReviewStatus] = useState('');
+  const [highValueReview, setHighValueReview] = useState({
+    source_of_funds: '',
+    source_of_wealth: '',
+    purpose_of_purchase: '',
+    transaction_frequency: '',
+  });
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -141,6 +151,12 @@ export default function MinerCustomerProfilePage({
           throw new Error(data?.detail ?? 'Failed to load customer profile');
         }
         setProfile(data);
+        setHighValueReview({
+          source_of_funds: data?.customer?.source_of_funds ?? '',
+          source_of_wealth: data?.customer?.source_of_wealth ?? '',
+          purpose_of_purchase: data?.customer?.purpose_of_purchase ?? '',
+          transaction_frequency: data?.customer?.transaction_frequency ?? '',
+        });
       })
       .catch((err) => {
         if (!active) return;
@@ -187,6 +203,7 @@ export default function MinerCustomerProfilePage({
   }
 
   const { customer } = profile;
+  const needsHighValueReview = profile.total_spend_usd > HIGH_VALUE_THRESHOLD_USD;
 
   const handleSubmitStr = async () => {
     setStrStatus('');
@@ -217,6 +234,32 @@ export default function MinerCustomerProfilePage({
       setStrStatus(err instanceof Error ? err.message : 'Failed to submit STR');
     } finally {
       setSubmittingStr(false);
+    }
+  };
+
+  const handleSaveHighValueReview = async () => {
+    if (!profile) return;
+    setReviewStatus('');
+    setReviewSaving(true);
+    try {
+      const res = await fetch(`/api/customers/${profile.customer.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          source_of_funds: highValueReview.source_of_funds || null,
+          source_of_wealth: highValueReview.source_of_wealth || null,
+          purpose_of_purchase: highValueReview.purpose_of_purchase || null,
+          transaction_frequency: highValueReview.transaction_frequency || null,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.detail || 'Failed to save high-value review');
+      setProfile((prev) => (prev ? { ...prev, customer: { ...prev.customer, ...data } } : prev));
+      setReviewStatus('High-value review details saved.');
+    } catch (err) {
+      setReviewStatus(err instanceof Error ? err.message : 'Failed to save high-value review.');
+    } finally {
+      setReviewSaving(false);
     }
   };
 
@@ -277,7 +320,7 @@ export default function MinerCustomerProfilePage({
                 </div>
               </div>
               <div className="flex gap-2">
-                {(customer.is_flagged || customer.politically_exposed || customer.known_sanctions || customer.risk_level === 'high') && (
+                {(customer.is_flagged || customer.politically_exposed || customer.known_sanctions || customer.risk_level === 'high' || needsHighValueReview) && (
                   <button
                     type="button"
                     onClick={handleSubmitStr}
@@ -412,6 +455,67 @@ export default function MinerCustomerProfilePage({
               </div>
             </div>
           </div>
+
+          {needsHighValueReview && (
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+                High-value review (above USD {HIGH_VALUE_THRESHOLD_USD.toLocaleString('en-US')})
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Source of funds</label>
+                  <input
+                    type="text"
+                    value={highValueReview.source_of_funds}
+                    onChange={(e) => setHighValueReview((p) => ({ ...p, source_of_funds: e.target.value }))}
+                    className="h-9 w-full border border-gray-200 rounded-md bg-gray-50 px-3 text-sm text-gray-800 focus:outline-none focus:border-gray-800"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Source of wealth</label>
+                  <input
+                    type="text"
+                    value={highValueReview.source_of_wealth}
+                    onChange={(e) => setHighValueReview((p) => ({ ...p, source_of_wealth: e.target.value }))}
+                    className="h-9 w-full border border-gray-200 rounded-md bg-gray-50 px-3 text-sm text-gray-800 focus:outline-none focus:border-gray-800"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Purpose of purchase</label>
+                  <input
+                    type="text"
+                    value={highValueReview.purpose_of_purchase}
+                    onChange={(e) => setHighValueReview((p) => ({ ...p, purpose_of_purchase: e.target.value }))}
+                    className="h-9 w-full border border-gray-200 rounded-md bg-gray-50 px-3 text-sm text-gray-800 focus:outline-none focus:border-gray-800"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Transaction frequency</label>
+                  <input
+                    type="text"
+                    value={highValueReview.transaction_frequency}
+                    onChange={(e) => setHighValueReview((p) => ({ ...p, transaction_frequency: e.target.value }))}
+                    className="h-9 w-full border border-gray-200 rounded-md bg-gray-50 px-3 text-sm text-gray-800 focus:outline-none focus:border-gray-800"
+                  />
+                </div>
+              </div>
+              {reviewStatus && (
+                <div className="mt-3 text-xs text-gray-600 border-l-2 border-gray-400 bg-gray-50 px-3 py-2 rounded-r">
+                  {reviewStatus}
+                </div>
+              )}
+              <div className="mt-3">
+                <button
+                  type="button"
+                  onClick={handleSaveHighValueReview}
+                  disabled={reviewSaving}
+                  className="text-xs px-3 py-1.5 rounded bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-60"
+                >
+                  {reviewSaving ? 'Saving...' : 'Save high-value review'}
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
             <div className="px-4 py-3 border-b border-gray-100">

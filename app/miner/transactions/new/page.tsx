@@ -28,6 +28,27 @@ interface FormErrors {
   [key: string]: string;
 }
 
+function extractApiErrorMessage(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const maybe = payload as { detail?: unknown; message?: unknown };
+  if (typeof maybe.message === 'string' && maybe.message.trim()) return maybe.message;
+  if (typeof maybe.detail === 'string' && maybe.detail.trim()) return maybe.detail;
+  if (Array.isArray(maybe.detail)) {
+    const messages = maybe.detail
+      .map((item) => {
+        if (typeof item === 'string') return item;
+        if (item && typeof item === 'object') {
+          const obj = item as { msg?: unknown };
+          if (typeof obj.msg === 'string') return obj.msg;
+        }
+        return null;
+      })
+      .filter((value): value is string => Boolean(value));
+    if (messages.length > 0) return messages.join('; ');
+  }
+  return null;
+}
+
 const inputBase =
   'h-9 w-full border rounded-md bg-gray-50 px-3 text-sm text-gray-800 focus:outline-none focus:border-gray-800';
 
@@ -61,6 +82,7 @@ export default function RecordGoldSalePage() {
   const [customerCheckLoading, setCustomerCheckLoading] = useState(false);
   const [customerCheckDone, setCustomerCheckDone] = useState(false);
   const [customerCheckResult, setCustomerCheckResult] = useState<SelectedCustomer | null>(null);
+  const [fileStrForHighValue, setFileStrForHighValue] = useState(false);
 
   const router = useRouter();
 
@@ -123,7 +145,7 @@ export default function RecordGoldSalePage() {
     setCustomerCheckDone(false);
     setCustomerCheckResult(null);
     try {
-      const p = new URLSearchParams({ national_id: customerCheckInput.trim() });
+      const p = new URLSearchParams({ query: customerCheckInput.trim() });
       const reg = localStorage.getItem('minerRegNumber');
       if (reg) p.set('miner_reg_number', reg);
       const res = await fetch(`/api/customers/check?${p}`, { cache: 'no-store' });
@@ -188,8 +210,22 @@ export default function RecordGoldSalePage() {
       });
 
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error((data as { detail?: string }).detail ?? 'Submission failed');
+        const data = await res.json().catch(() => null);
+        const message = extractApiErrorMessage(data) ?? 'Submission failed';
+        throw new Error(message);
+      }
+
+      const saleAmount = parseFloat(formData.saleAmountUsd || '0');
+      if (fileStrForHighValue && selectedCustomer && saleAmount > 5000) {
+        await fetch(`${BACKEND}/customers/${selectedCustomer.id}/str`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            reason: `High-value transaction above USD 5000 recorded (${saleAmount.toFixed(2)} USD).`,
+            note: `Filed during transaction capture for customer ${selectedCustomer.full_name}.`,
+            filed_by: minerReg ?? 'system',
+          }),
+        }).catch(() => null);
       }
 
       router.push('/miner/dashboard?transaction=success');
@@ -274,6 +310,8 @@ export default function RecordGoldSalePage() {
 
   const showCashWarning = paymentMethod === 'cash';
   const showCddWarning = !buyerVerified || !cddCompleted;
+  const saleAmount = parseFloat(formData.saleAmountUsd || '0');
+  const showHighValueStrOption = saleAmount > 5000 && !!selectedCustomer;
 
   return (
     <div className="flex h-screen">
@@ -345,7 +383,7 @@ export default function RecordGoldSalePage() {
                         value={customerCheckInput}
                         onChange={e => { setCustomerCheckInput(e.target.value); setCustomerCheckDone(false); }}
                         onKeyDown={e => e.key === 'Enter' && handleCustomerCheck()}
-                        placeholder="Enter customer national ID to search..."
+                        placeholder="Enter customer name or national ID to search..."
                         className={`${inputBase} flex-1 ${errors.customer ? 'border-gray-800' : 'border-gray-200'}`}
                       />
                       <button
@@ -565,6 +603,26 @@ export default function RecordGoldSalePage() {
                   </div>
                   <CddToggle value={cddCompleted} onChange={setCddCompleted} />
                 </div>
+
+                {showHighValueStrOption && (
+                  <div className="mt-3 border-l-2 border-gray-400 bg-gray-50 pl-3 py-2.5 rounded-r">
+                    <div className="text-xs font-medium text-gray-700">
+                      High-value transaction detected
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      This amount is above USD 5000. You can still save the transaction and optionally file an STR now.
+                    </div>
+                    <label className="inline-flex items-center gap-2 mt-2 text-xs text-gray-700">
+                      <input
+                        type="checkbox"
+                        checked={fileStrForHighValue}
+                        onChange={e => setFileStrForHighValue(e.target.checked)}
+                        className="h-3.5 w-3.5 border border-gray-300 rounded"
+                      />
+                      File STR after saving this transaction
+                    </label>
+                  </div>
+                )}
 
                 {submitError && (
                   <div className="mt-3 text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded p-3">
